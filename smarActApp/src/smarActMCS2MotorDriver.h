@@ -8,14 +8,14 @@ Jan 19, 2019
 
 Note:
 The MCS2 controller uses 64-bit int for the encoder and target positions. The motor record is limited
-to 32 bit int for RMP (https://github.com/epics-modules/motor/issues/8, 
+to 32 bit int for RMP (https://github.com/epics-modules/motor/issues/8,
 https://epics.anl.gov/tech-talk/2018/msg00087.php) which effectively limits the travel
-range to +/- 2.1mm. 
+range to +/- 2.1mm.
 Since it doesn't seem the motor record will update to using 64bit int the choices I can see are:
 * 1 - using a non-standard motor support
 * 2 - rescaling the minimum resolution to 1nm to effectively increase the range to 2.1m
 
-I chose option 2. 
+I chose option 2.
 1 step = 1nm
 
 Someone with more experience may have a better solution.
@@ -119,11 +119,11 @@ protected:
   int ptyp_; /**< positioner type */
   int ptyprb_; /**< positioner type readback */
   int pstatrb_; /**< positoner status word readback */
-  int ref_;  /**< reference command */ 
+  int ref_;  /**< reference command */
   int cal_;  /**< calibration command */
 #define LAST_MCS2_PARAM cal_
 #define NUM_MCS2_PARAMS (&LAST_MCS2_PARAM - &FIRST_MCS2_PARAM + 1)
-  
+
 friend class MCS2Axis;
 };
 

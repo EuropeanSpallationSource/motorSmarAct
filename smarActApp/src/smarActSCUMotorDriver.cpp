@@ -48,20 +48,20 @@
 #endif
 
 enum SmarActSCUStatus {
-	Stopped     = 0,
-	AmplSetting = 1,
-	Moving      = 2,
-	Targeting   = 3,
-	Holding     = 4,
-	Calibrating = 5,
-	Referencing = 6,
-	Unknown     = 7
+  Stopped     = 0,
+  AmplSetting = 1,
+  Moving      = 2,
+  Targeting   = 3,
+  Holding     = 4,
+  Calibrating = 5,
+  Referencing = 6,
+  Unknown     = 7
 };
 
 static SmarActSCUStatus parseMovingStatus(char statusChar)
 {
     SmarActSCUStatus status = Unknown;
-    
+
     if      ('S' == statusChar) status = Stopped;
     else if ('A' == statusChar) status = AmplSetting;
     else if ('M' == statusChar) status = Moving;
@@ -161,13 +161,13 @@ SmarActSCUAxis::SmarActSCUAxis(class SmarActSCUController *cnt_p, int axis, int 
 
         // Determine if stage is a rotation stage
   if (positionerType_ == 2 ||
-      positionerType_ == 8 || 
-      positionerType_ == 14 || 
-      positionerType_ == 20 || 
-      positionerType_ == 22 || 
-      positionerType_ == 23 || 
+      positionerType_ == 8 ||
+      positionerType_ == 14 ||
+      positionerType_ == 20 ||
+      positionerType_ == 22 ||
+      positionerType_ == 23 ||
       (positionerType_ >= 25 && positionerType_ <= 29)) {
-    isRot_ = 1;   
+    isRot_ = 1;
     if ( asynSuccess == getAngle(&currentPosition, &rev) ) {
       setIntegerParam(pC_->motorStatusHasEncoder_, 1);
       setIntegerParam(pC_->motorStatusGainSupport_, 1);
@@ -196,19 +196,19 @@ bail:
 
 /* Send a command to the controller and read the response.
  * Uses the toController_ and fromController_ strings in asynMotorController.
- * 
+ *
  * RETURNS:  asynError if an error occurred, asynSuccess otherwise.
  */
 asynStatus SmarActSCUAxis::sendCmd()
 {
   size_t replyLen;
   asynStatus status;
-  
+
   status = pC_->writeReadController(toController_, fromController_, sizeof(fromController_), &replyLen, DEFAULT_TIMEOUT);
   if (status)
     asynPrint(pasynUser_, ASYN_TRACE_ERROR, "ERROR: sendCmd: status=%d, sent: %s, received: %s\n", status, toController_, fromController_);
   else
-    asynPrint(pasynUser_, ASYN_TRACEIO_DRIVER, "sendCmd: status=%d, sent: %s, received: %s\n", status, toController_, fromController_);  
+    asynPrint(pasynUser_, ASYN_TRACEIO_DRIVER, "sendCmd: status=%d, sent: %s, received: %s\n", status, toController_, fromController_);
   return status;
 }
 
@@ -216,7 +216,7 @@ asynStatus SmarActSCUAxis::sendCmd()
  *
  * parm_cmd: SCU command (w/o ':' char) to read parameter
  * val_p:    where to store the value returned by the SCU
- * 
+ *
  * RETURNS:  asynError if an error occurred, asynSuccess otherwise.
  */
 asynStatus
@@ -245,7 +245,7 @@ SmarActSCUAxis::getIntegerVal(const char *parm_cmd, int *val_p)
  *
  * parm_cmd: SCU command (w/o ':' char) to read parameter
  * val_p:    where to store the value returned by the SCU
- * 
+ *
  * RETURNS:  asynError if an error occurred, asynSuccess otherwise.
  */
 asynStatus
@@ -273,7 +273,7 @@ SmarActSCUAxis::getDoubleVal(const char *parm_cmd, double *val_p)
  *
  * parm_cmd: SCU command (w/o ':' char) to read parameter
  * val_p:    where to store the value returned by the SCU
- * 
+ *
  * RETURNS:  asynError if an error occurred, asynSuccess otherwise.
  */
 asynStatus
@@ -300,7 +300,7 @@ SmarActSCUAxis::getCharVal(const char *parm_cmd, char *val_p)
  *
  * parm_cmd: SCU command (w/o ':' char) to read parameter
  * val_p:    where to store the value returned by the SCU
- * 
+ *
  * RETURNS:  asynError if an error occurred, asynSuccess otherwise.
  */
 asynStatus
@@ -382,7 +382,7 @@ enum SmarActSCUStatus  movingStatus;
   /* Check if the sensor 'knows' absolute position and
    * update the MSTA 'HOMED' bit.
    */
-  if ((comStatus_ = getIntegerVal("GPPK", &integerVal))) 
+  if ((comStatus_ = getIntegerVal("GPPK", &integerVal)))
     goto bail;
 
   setIntegerParam(pC_->motorStatusHomed_, integerVal ? 1 : 0 );
@@ -403,7 +403,7 @@ bail:
   return comStatus_;
 }
 
-asynStatus  
+asynStatus
 SmarActSCUAxis::move(double position, int relative, double min_vel, double max_vel, double accel)
 {
   double rpos;
@@ -518,7 +518,7 @@ double       tgt_pos = FAR_AWAY;
   }
 
   if ( max_vel < 0 ) {
-    tgt_pos = -tgt_pos; 
+    tgt_pos = -tgt_pos;
   }
 
   return this->move(tgt_pos, 1, 0, max_vel, accel);

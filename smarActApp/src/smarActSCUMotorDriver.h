@@ -35,7 +35,7 @@ public:
   virtual const char *what()
     const throw() {return str_ ;}
 protected:
-  char str_[100];  
+  char str_[100];
   SmarActSCUExceptionType t_;
 };
 
