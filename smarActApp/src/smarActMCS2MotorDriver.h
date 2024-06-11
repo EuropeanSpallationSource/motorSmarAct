@@ -96,6 +96,10 @@ private:
   int sensorPresent_;
   PositionType stepTarget_;
   //asynStatus comStatus_;
+  asynStatus reportHelperCheckError(const char *scpi_leaf, char *input, size_t maxChars);
+#define REPORTHELPERCHECKERROR(a,b) reportHelperCheckError(a,b,sizeof(b))
+  asynStatus reportHelperInteger(const char *scpi_leaf, int *pResult);
+  asynStatus reportHelperDouble(const char *scpi_leaf, double *pResult);
 
 friend class MCS2Controller;
 };

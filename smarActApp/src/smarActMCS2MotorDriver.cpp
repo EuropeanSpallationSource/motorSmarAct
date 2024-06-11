@@ -24,6 +24,11 @@ Jan 19, 2019
 #include <epicsExport.h>
 #include "smarActMCS2MotorDriver.h"
 
+/* ESS defined one bit for INFO. Tried to get that upstream, but failed */
+#ifndef ASYN_TRACE_INFO
+#define ASYN_TRACE_INFO 0x0040
+#endif
+
 static const char *driverName = "SmarActMCS2MotorDriver";
 
 /** Creates a new MCS2Controller object.
@@ -274,6 +279,47 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
   callParamCallbacks();
 }
 
+
+/** Helper to report()
+ */
+asynStatus MCS2Axis::reportHelperCheckError(const char *scpi_leaf, char *input, size_t maxChars)
+{
+  static const char *functionName = "reportHelperCheckError";
+
+  char outString[128];
+  size_t nread = 0;
+  asynStatus status;
+  snprintf(outString, sizeof(outString), ":CHAN%d%s", axisNo_, scpi_leaf);
+  memset(input, 0, maxChars);
+  status = pC_->writeReadController(outString, input, maxChars, &nread, DEFAULT_CONTROLLER_TIMEOUT);
+  asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO, "%s(%d) outString='%s' input='%s' status=%d\n",
+            functionName, axisNo_, outString, input, (int)status);
+  if (status == asynTimeout)  {
+    pC_->clearErrors();
+  }
+  return status;
+}
+
+asynStatus MCS2Axis::reportHelperInteger(const char *scpi_leaf, int *pResult)
+{
+  char inString[128];
+  asynStatus status = reportHelperCheckError(scpi_leaf, inString, sizeof(inString));
+  if (status == asynSuccess) {
+    *pResult = atoi(inString);
+  }
+  return status;
+}
+
+asynStatus MCS2Axis::reportHelperDouble(const char *scpi_leaf, double *pResult)
+{
+  char inString[128];
+  asynStatus status = reportHelperCheckError(scpi_leaf, inString, sizeof(inString));
+  if (status == asynSuccess) {
+    *pResult = atof(inString);
+  }
+  return status;
+}
+
 /** Reports on status of the driver
   * \param[in] fp The file pointer on which report information will be written
   * \param[in] level The level of report detail desired
@@ -284,61 +330,68 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
 void MCS2Axis::report(FILE *fp, int level)
 {
   if (level > 0) {
-  int pcode;
-  char pname[256];
-  int channelState;
-  int vel;
-  int acc;
-  int mclf;
-    int followError;
-  int error;
-  int temp;
+    int pcode = -1;
+    struct {
+      char pname[256];
+      char rlimit_current_min[32]; /* 27 coluld be enough for a 64 bit int */
+      char rlimit_current_max[32]; /* Use 32 to keep buffers aligned */
+      char in_position_threshold[32];
+      char in_position_delay[32];
+      char target_reached_threshold[32];
+      char target_hold_threshold[32];
+    } buf;
+    int channelState = -1;
+    int vel = -1;
+    int acc = -1;
+    int mclf = -1;
+    int followError = -1;
+    int error = -1;
+    int temp = -1;
 
-  asynStatus status;
+    memset(&buf, 0, sizeof(buf)); /* clear all ASCII buffer in one go */
 
-  sprintf(pC_->outString_, ":CHAN%d:PTYP?", channel_);
-  status = pC_->writeReadController();
-  pcode = atoi(pC_->inString_);
-  sprintf(pC_->outString_, ":CHAN%d:PTYP:NAME?", channel_);
-  status = pC_->writeReadController();
-  strcpy(pC_->inString_, pname);
-  sprintf(pC_->outString_, ":CHAN%d:STAT?", channel_);
-  status = pC_->writeReadController();
-  channelState = atoi(pC_->inString_);
-  sprintf(pC_->outString_, ":CHAN%d:VEL?", channel_);
-  status = pC_->writeReadController();
-  vel = atoi(pC_->inString_);
-  sprintf(pC_->outString_, ":CHAN%d:ACC?", channel_);
-  status = pC_->writeReadController();
-  acc = atoi(pC_->inString_);
-  sprintf(pC_->outString_, ":CHAN%d:MCLF?", channel_);
-  status = pC_->writeReadController();
-  mclf = atoi(pC_->inString_);
-  sprintf(pC_->outString_, ":CHAN%d:FERR?", channel_);
-  status = pC_->writeReadController();
-  followError = atoi(pC_->inString_);
-  sprintf(pC_->outString_, ":CHAN%d:ERR?", channel_);
-  status = pC_->writeReadController();
-  error = atoi(pC_->inString_);
-  sprintf(pC_->outString_, ":CHAN%d:TEMP?", channel_);
-  status = pC_->writeReadController();
-  temp = atoi(pC_->inString_);
+    reportHelperInteger(":PTYP?", &pcode);
+    reportHelperCheckError(":PTYP:NAME?", buf.pname, sizeof(buf.pname));
+    reportHelperInteger(":STAT?", &channelState);
+    reportHelperInteger(":VEL?", &vel);
+    reportHelperInteger(":ACC?", &acc);
+    reportHelperInteger(":MCLF?", &mclf);
+    reportHelperInteger(":FERR?", &followError);
+    reportHelperInteger(":ERR?", &error);
+    reportHelperInteger(":TEMP?", &temp);
+    REPORTHELPERCHECKERROR(":RLIM:MIN?", buf.rlimit_current_min);
+    REPORTHELPERCHECKERROR(":RLIM:MAX?", buf.rlimit_current_max);
+    REPORTHELPERCHECKERROR(":INP:THR?", buf.in_position_threshold);
+    REPORTHELPERCHECKERROR(":INP:DEL?", buf.in_position_delay);
+    REPORTHELPERCHECKERROR(":TUN:THR:TRE?", buf.target_reached_threshold);
+    // Command does not exist REPORTHELPERCHECKERROR(":TUN:THR:THO?", buf.target_hold_threshold);
 
 
 
     fprintf(fp, "  axis %d\n"
-          " positioner type %d\n"
-        " positioner name %s\n"
-        " state %d\n"
-        " velocity %d\n"
-        " acceleration %d\n"
-        " max closed loop frequency %d\n"
-        " following error %d\n"
-        " error %d\n"
-        " temp %d\n",
-            axisNo_, pcode, pname, channelState, vel,
-      acc, mclf, followError, error, temp);
-  pC_->clearErrors();
+                " positioner type %d\n"
+                " positioner name %s\n"
+                " state %d 0x%X\n"
+                " rlimit_current_min %s\n"
+                " rlimit_current_max %s\n"
+                " in_position_threshold %s\n"
+                " in_position_delay %s\n"
+                " target_reached_threshold %s\n"
+                " target_hold_threshold %s\n"
+                " velocity %d\n"
+                " acceleration %d\n"
+                " max closed loop frequency %d\n"
+                " following error %d\n"
+                " error %d\n"
+                " temp %d\n",
+            axisNo_, pcode, buf.pname, channelState, channelState,
+            buf.rlimit_current_min, buf.rlimit_current_max,
+            buf.in_position_threshold,
+            buf.in_position_delay,
+            buf.target_reached_threshold,
+            buf.target_hold_threshold,
+            vel, acc, mclf, followError, error, temp);
+    pC_->clearErrors();
   }
 
   // Call the base class method
