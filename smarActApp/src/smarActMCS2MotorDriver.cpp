@@ -372,7 +372,7 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
     status = pC_->writeController();
   } else {
     // open loop move
-    PositionType dtg = position - stepTarget_;  // distance to go
+    PositionType dtg = (PositionType)(position - stepTarget_);  // distance to go
     stepTarget_ = (PositionType)position;       // store position in global scope
     // Set mode; 4 == STEP
     sprintf(pC_->outString_, ":CHAN%d:MMOD 4", channel_);

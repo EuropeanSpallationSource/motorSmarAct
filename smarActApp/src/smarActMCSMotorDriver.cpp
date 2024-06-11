@@ -576,19 +576,19 @@ SmarActMCSAxis::move(double position, int relative, double min_vel, double max_v
 		if (relative == 0 ) // absolute move
 		{
 			int diff = rpos - stepCount_;
-			stepCount_ = rpos;
+			stepCount_ = (int)rpos;
 			rpos = diff; // subtract current step count to produce steps for this move
 		}
 		else
 		{
 			// relative move. the position value is the number of steps intended
-			stepCount_ += rpos;
+			stepCount_ += (int)rpos;
 		}
 		// overload min_vel as amplitude
 		double piezoVoltage = (min_vel > MAX_VOLTAGE) ? (MAX_VOLTAGE) : ((min_vel < 1) ? (1) : (min_vel));
-		int amplitude = piezoVoltage * STEP_PER_VOLT;
+		int amplitude = (int)(piezoVoltage * STEP_PER_VOLT);
 		// overload max_vel as frequency
-		int frequency = (max_vel> MAX_FREQ) ? (MAX_FREQ) : ((max_vel< 1) ? (1) : (max_vel));
+		int frequency = (int)((max_vel> MAX_FREQ) ? (MAX_FREQ) : ((max_vel< 1) ? (1) : (max_vel)));
 
 #ifdef DEBUG
 		printf("Open loop Step to %ld (piezo voltage %d ,frequency %d)\n", (long)rpos, amplitude, frequency);
@@ -677,7 +677,7 @@ SmarActMCSAxis::setPosition(double position)
 	}
 	else
 	{
-		stepCount_ = rpos;
+		stepCount_ = (int)rpos;
 	}
 	if ( comStatus_ ) {
 		setIntegerParam(c_p_->motorStatusProblem_,    1);
