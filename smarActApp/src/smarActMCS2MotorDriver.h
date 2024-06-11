@@ -94,8 +94,8 @@ private:
                                 *   Abbreviated because it is used very frequently */
   int channel_;
   int sensorPresent_;
-  PositionType stepTarget_ = 0;
-  asynStatus comStatus_;
+  PositionType stepTarget_;
+  //asynStatus comStatus_;
 
 friend class MCS2Controller;
 };

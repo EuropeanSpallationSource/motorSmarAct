@@ -263,14 +263,13 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
   : asynMotorAxis(pC, axisNo),
     pC_(pC)
 {
-  asynStatus status;
-
   asynPrint(pC->pasynUserSelf, ASYN_TRACEIO_DRIVER, "MCS2Axis::MCS2Axis: Creating axis %u\n", axisNo);
   channel_ = axisNo;
+  stepTarget_ = 0;
 
   // Set hold time
   sprintf(pC_->outString_, ":CHAN%d:HOLD %d", channel_, HOLD_FOREVER);
-  status = pC_->writeController();
+  (void)pC_->writeController();
   pC_->clearErrors();
   callParamCallbacks();
 }
@@ -350,7 +349,7 @@ void MCS2Axis::report(FILE *fp, int level)
 asynStatus MCS2Axis::move(double position, int relative, double minVelocity, double maxVelocity, double acceleration)
 {
   asynStatus status = asynSuccess;
-  static const char *functionName = "move";
+  //static const char *functionName = "move";
 
   /* MCS2 move mode is:
    *	- absolute=0
@@ -397,7 +396,7 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
 asynStatus MCS2Axis::home(double minVelocity, double maxVelocity, double acceleration, int forwards)
 {
   asynStatus status=asynSuccess;
-   static const char *functionName = "homeAxis";
+  //static const char *functionName = "homeAxis";
   printf("Home command received %d\n", forwards);
   unsigned short refOpt = 0;
 
@@ -435,7 +434,7 @@ asynStatus MCS2Axis::home(double minVelocity, double maxVelocity, double acceler
 asynStatus MCS2Axis::stop(double acceleration )
 {
   asynStatus status;
-  static const char *functionName = "stopAxis";
+  //static const char *functionName = "stopAxis";
 
   sprintf(pC_->outString_, ":STOP%d", channel_);
   status = pC_->writeController();
