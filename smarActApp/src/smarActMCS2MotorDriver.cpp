@@ -279,11 +279,8 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
   asynPrint(pC->pasynUserSelf, ASYN_TRACEIO_DRIVER, "MCS2Axis::MCS2Axis: Creating axis %u\n", axisNo);
   channel_ = axisNo;
   stepTarget_ = 0;
+  initialPollDone_ = 0;
 
-  // Set hold time
-  sprintf(pC_->outString_, ":CHAN%d:HOLD %d", channel_, HOLD_FOREVER);
-  (void)pC_->writeController();
-  pC_->clearErrors();
   // Set hold time in the parameter database
   setIntegerParam(pC_->hold_, HOLD_FOREVER);
   callParamCallbacks();
@@ -419,15 +416,6 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
    */
   if(sensorPresent_) {
     // closed loop move
-    // Set hold time
-    {
-      int hold = HOLD_FOREVER;
-      (void)pC_->getIntegerParam(axisNo_, pC_->hold_,
-                                 &hold);
-      sprintf(pC_->outString_, ":CHAN%d:HOLD %d", channel_, hold);
-      status = pC_->writeController();
-      pC_->clearErrors();
-    }
     sprintf(pC_->outString_, ":CHAN%d:MMOD %d", channel_, relative > 0 ? 1 : 0);
     status = pC_->writeController();
     // Set acceleration
@@ -480,15 +468,6 @@ asynStatus MCS2Axis::home(double minVelocity, double maxVelocity, double acceler
   status = pC_->writeController();
   pC_->clearErrors();
 
-  // Set hold time
-  {
-    int hold = HOLD_FOREVER;
-    (void)pC_->getIntegerParam(axisNo_, pC_->hold_,
-                               &hold);
-    sprintf(pC_->outString_, ":CHAN%d:HOLD %d", channel_, hold);
-    status = pC_->writeController();
-    pC_->clearErrors();
-  }
   // Set acceleration
   sprintf(pC_->outString_, ":CHAN%d:ACC %f", channel_, acceleration*PULSES_PER_STEP);
   status = pC_->writeController();
@@ -526,6 +505,23 @@ asynStatus MCS2Axis::setPosition(double position)
   return status;
 }
 
+/** Initial poll (and update) of the axis.
+  * \param[out] moving A flag that is set indicating that the axis is moving (1) or done (0). */
+asynStatus MCS2Axis::initialPoll(void)
+{
+  asynStatus status=asynSuccess;
+  // Set hold time
+  {
+    int hold = HOLD_FOREVER;
+    (void)pC_->getIntegerParam(axisNo_, pC_->hold_,
+                               &hold);
+    sprintf(pC_->outString_, ":CHAN%d:HOLD %d", channel_, hold);
+    status = pC_->writeController();
+    pC_->clearErrors();
+  }
+  return status;
+}
+
 /** Polls the axis.
   * This function reads the controller position, encoder position, the limit status, the moving status,
   * the drive power-on status and positioner type. It does not current detect following error, etc.
@@ -552,6 +548,11 @@ asynStatus MCS2Axis::poll(bool *moving)
   int mclf;
   asynStatus comStatus = asynSuccess;
 
+  if (!initialPollDone_) {
+    comStatus = initialPoll();
+    if (comStatus) goto skip;
+    initialPollDone_ = 1;
+  }
   // Read the channel state
   sprintf(pC_->outString_, ":CHAN%d:STAT?", channel_);
   comStatus = pC_->writeReadController();
@@ -625,6 +626,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   }
 
   skip:
+  if (comStatus) initialPollDone_ = 0;
   setIntegerParam(pC_->motorStatusCommsError_, comStatus ? 1:0);
   callParamCallbacks();
   return comStatus ? asynError : asynSuccess;
