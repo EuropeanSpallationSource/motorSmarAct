@@ -522,7 +522,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   int isReferenced;
   int endStopReached;
   int followLimitReached;
-  int movementFailed;
+  int movementFailed = 0;
   int refMark;
   int positionerType;
   double encoderPosition;
@@ -537,15 +537,15 @@ asynStatus MCS2Axis::poll(bool *moving)
   if (comStatus) goto skip;
   chanState = atoi(pC_->inString_);
   setIntegerParam(pC_->pstatrb_, chanState);
-  done               = (chanState & ACTIVELY_MOVING)?0:1;
-  closedLoop         = (chanState & CLOSED_LOOP_ACTIVE)?1:0;
-  sensorPresent      = (chanState & SENSOR_PRESENT)?1:0;
-  isCalibrated       = (chanState & IS_CALIBRATED)?1:0;
-  isReferenced       = (chanState & IS_REFERENCED)?1:0;
-  endStopReached     = (chanState & END_STOP_REACHED)?1:0;
-  followLimitReached = (chanState & FOLLOWING_LIMIT_REACHED)?1:0;
-  movementFailed     = (chanState & MOVEMENT_FAILED)?1:0;
-  refMark            = (chanState & REFERENCE_MARK)?1:0;
+  done               = (chanState & CH_STATE_ACTIVELY_MOVING)?0:1;
+  closedLoop         = (chanState & CH_STATE_CLOSED_LOOP_ACTIVE)?1:0;
+  sensorPresent      = (chanState & CH_STATE_SENSOR_PRESENT)?1:0;
+  isCalibrated       = (chanState & CH_STATE_IS_CALIBRATED)?1:0;
+  isReferenced       = (chanState & CH_STATE_IS_REFERENCED)?1:0;
+  endStopReached     = (chanState & CH_STATE_END_STOP_REACHED)?1:0;
+  followLimitReached = (chanState & CH_STATE_FOLLOWING_LIMIT_REACHED)?1:0;
+  movementFailed     = (chanState & CH_STATE_MOVEMENT_FAILED)?1:0;
+  refMark            = (chanState & CH_STATE_REFERENCE_MARK)?1:0;
 
   *moving = done ? false:true;
   setIntegerParam(pC_->motorStatusDone_, done);
@@ -555,8 +555,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   setIntegerParam(pC_->motorStatusHomed_, isReferenced);
   setIntegerParam(pC_->motorStatusHighLimit_, endStopReached);
   setIntegerParam(pC_->motorStatusLowLimit_, endStopReached);
-  setIntegerParam(pC_->motorStatusFollowingError_, followLimitReached);
-  setIntegerParam(pC_->motorStatusProblem_, movementFailed);
+  setIntegerParam(pC_->motorStatusFollowingError_, followLimitReached || movementFailed);
   setIntegerParam(pC_->motorStatusAtHome_, refMark);
 
   // Read the current encoder position, if the positioner has a sensor
@@ -584,7 +583,6 @@ asynStatus MCS2Axis::poll(bool *moving)
   if (comStatus) goto skip;
   driveOn = atoi(pC_->inString_) ? 1:0;
   setIntegerParam(pC_->motorStatusPowerOn_, driveOn);
-  setIntegerParam(pC_->motorStatusProblem_, 0);
 
   // Read the currently selected positioner type
   sprintf(pC_->outString_, ":CHAN%d:PTYP?", channel_);

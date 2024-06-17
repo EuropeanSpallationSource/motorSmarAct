@@ -41,21 +41,27 @@ The two that may be of significant interest are:
 typedef long long PositionType;
 
 /** MCS2 Axis status flags **/
-const unsigned short ACTIVELY_MOVING         = 0x0001;
-const unsigned short CLOSED_LOOP_ACTIVE      = 0x0002;
-const unsigned short CALIBRATING             = 0x0004;
-const unsigned short REFERENCING             = 0x0008;
-const unsigned short MOVE_DELAYED            = 0x0010;
-const unsigned short SENSOR_PRESENT          = 0x0020;
-const unsigned short IS_CALIBRATED           = 0x0040;
-const unsigned short IS_REFERENCED           = 0x0080;
-const unsigned short END_STOP_REACHED        = 0x0100;
-const unsigned short RANGE_LIMIT_REACHED     = 0x0200;
-const unsigned short FOLLOWING_LIMIT_REACHED = 0x0400;
-const unsigned short MOVEMENT_FAILED         = 0x0800;
-const unsigned short STREAMING               = 0x1000;
-const unsigned short OVERTEMP                = 0x4000;
-const unsigned short REFERENCE_MARK          = 0x8000;
+#define CH_STATE_ACTIVELY_MOVING         0x0001
+#define CH_STATE_CLOSED_LOOP_ACTIVE      0x0002
+#define CH_STATE_CALIBRATING             0x0004
+#define CH_STATE_REFERENCING             0x0008
+#define CH_STATE_MOVE_DELAYED            0x0010
+#define CH_STATE_SENSOR_PRESENT          0x0020
+#define CH_STATE_IS_CALIBRATED           0x0040
+#define CH_STATE_IS_REFERENCED           0x0080
+#define CH_STATE_END_STOP_REACHED        0x0100
+#define CH_STATE_RANGE_LIMIT_REACHED     0x0200
+#define CH_STATE_FOLLOWING_LIMIT_REACHED 0x0400
+#define CH_STATE_MOVEMENT_FAILED         0x0800
+#define CH_STATE_STREAMING               0x1000
+#define CH_STATE_POSITIONER_OVERLOAD     0x2000
+#define CH_STATE_OVERTEMP                0x4000
+#define CH_STATE_REFERENCE_MARK          0x8000
+#define CH_STATE_IS_PHASED           0x00010000
+#define CH_STATE_POSITIONER_FAULT    0x00020000
+#define CH_STATE_AMPLIFIER_ENABLED   0x00040000
+#define CH_STATE_IN_POSITION         0x00080000
+#define CH_STATE_BRAKE_ENABLED       0x00100000
 
 /** MCS2 Axis reference options **/
 const unsigned short   START_DIRECTION         = 0x0001;
@@ -76,6 +82,7 @@ const unsigned short   STOP_ON_REF_FOUND       = 0x0020;
 #define MCS2PstatString "PSTAT"
 #define MCS2RefString "REF"
 #define MCS2CalString "CAL"
+#define MCS2HoldString "HOLD"
 
 class epicsShareClass MCS2Axis : public asynMotorAxis
 {
@@ -96,6 +103,8 @@ private:
   int sensorPresent_;
   PositionType stepTarget_;
   //asynStatus comStatus_;
+  int initialPollDone_;
+  asynStatus initialPoll(void);
   asynStatus reportHelperCheckError(const char *scpi_leaf, char *input, size_t maxChars);
 #define REPORTHELPERCHECKERROR(a,b) reportHelperCheckError(a,b,sizeof(b))
   asynStatus reportHelperInteger(const char *scpi_leaf, int *pResult);
@@ -125,7 +134,8 @@ protected:
   int pstatrb_; /**< positoner status word readback */
   int ref_;  /**< reference command */
   int cal_;  /**< calibration command */
-#define LAST_MCS2_PARAM cal_
+  int hold_; /** hold time */
+#define LAST_MCS2_PARAM hold_
 #define NUM_MCS2_PARAMS (&LAST_MCS2_PARAM - &FIRST_MCS2_PARAM + 1)
 
 friend class MCS2Axis;
