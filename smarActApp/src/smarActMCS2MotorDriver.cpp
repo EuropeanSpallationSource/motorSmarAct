@@ -113,6 +113,91 @@ extern "C" int MCS2CreateController(const char *portName, const char *MCS2PortNa
   return(asynSuccess);
 }
 
+extern "C" const char *mcs2AsynStatusToString(asynStatus status) {
+  switch ((int)status) {
+    case asynSuccess:
+      return "asynSuccess";
+    case asynTimeout:
+      return "asynTimeout";
+    case asynOverflow:
+      return "asynOverflow";
+    case asynError:
+      return "asynError";
+    case asynDisconnected:
+      return "asynDisconnected";
+    case asynDisabled:
+      return "asynDisabled";
+    case asynParamAlreadyExists:
+      return "asynParamAlreadyExists";
+    case asynParamNotFound:
+      return "asynParamNotFound";
+    case asynParamWrongType:
+      return "asynParamWrongType";
+    case asynParamBadIndex:
+      return "asynParamBadIndex";
+    case asynParamUndefined:
+      return "asynParamUndefined";
+    default:
+      return "??";
+  }
+}
+
+extern "C" asynStatus disconnect_C(asynUser *pasynUser) {
+  asynStatus status = asynError;
+  asynInterface *pasynInterface = NULL;
+  asynCommon *pasynCommon = NULL;
+  static const char *functionName = "disconnect_C";
+  pasynInterface =
+      pasynManager->findInterface(pasynUser, asynCommonType, 0 /* FALSE */);
+  if (pasynInterface) {
+    pasynCommon = (asynCommon *)pasynInterface->pinterface;
+    status = pasynCommon->disconnect(pasynInterface->drvPvt, pasynUser);
+    if (status != asynSuccess) {
+      asynPrint(pasynUser, ASYN_TRACE_ERROR | ASYN_TRACEIO_DRIVER,
+                "%s status=%s (%d)\n", functionName, mcs2AsynStatusToString(status),
+                (int)status);
+    }
+  } else {
+    asynPrint(pasynUser, ASYN_TRACE_ERROR | ASYN_TRACEIO_DRIVER,
+              "%s pasynInterface=%p pasynCommon=%p\n", functionName,
+              pasynInterface, pasynCommon);
+  }
+  return status;
+}
+
+extern "C" asynStatus writeReadOnErrorDisconnect_C(asynUser *pasynUser,
+                                                   const char *outdata,
+                                                   size_t outlen, char *indata,
+                                                   size_t inlen) {
+  size_t nwrite;
+  asynStatus status = asynError;
+  int eomReason = 0;
+  size_t nread;
+  static const char *functionName = "writeReadOnErrorDisconnect_C";
+  status = pasynOctetSyncIO->writeRead(pasynUser, outdata, outlen, indata,
+                                       inlen, DEFAULT_CONTROLLER_TIMEOUT,
+                                       &nwrite, &nread, &eomReason);
+  if ((status == asynTimeout) || (!nread && (eomReason & ASYN_EOM_END))) {
+    asynPrint(pasynUser, ASYN_TRACE_ERROR | ASYN_TRACEIO_DRIVER,
+              "%s out=%s nread=%lu eomReason=%x (%s%s%s) status=%s (%d)\n",
+              functionName, outdata, (unsigned long)nread, eomReason,
+              eomReason & ASYN_EOM_CNT ? "CNT" : "",
+              eomReason & ASYN_EOM_EOS ? "EOS" : "",
+              eomReason & ASYN_EOM_END ? "END" : "",
+              mcs2AsynStatusToString(status), status);
+    disconnect_C(pasynUser);
+    return asynError; /* TimeOut -> Error */
+  }
+  return status;
+}
+
+asynStatus MCS2Controller::writeReadOnErrorDisconnect(void)
+{
+  inString_[0] = '\0';
+  return writeReadOnErrorDisconnect_C(pasynUserController_, outString_,
+                                      strlen(outString_), inString_, sizeof(inString_));
+}
+
 asynStatus MCS2Controller::clearErrors()
 {
 
@@ -555,7 +640,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   }
   // Read the channel state
   sprintf(pC_->outString_, ":CHAN%d:STAT?", channel_);
-  comStatus = pC_->writeReadController();
+  comStatus = pC_->writeReadOnErrorDisconnect();
   if (comStatus) goto skip;
   chanState = atoi(pC_->inString_);
   setIntegerParam(pC_->pstatrb_, chanState);
@@ -584,7 +669,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   sensorPresent_ = sensorPresent;
   if(sensorPresent){
     sprintf(pC_->outString_, ":CHAN%d:POS?", channel_);
-    comStatus = pC_->writeReadController();
+    comStatus = pC_->writeReadOnErrorDisconnect();
     if (comStatus) goto skip;
     encoderPosition = (double)strtod(pC_->inString_, NULL);
     encoderPosition /= PULSES_PER_STEP;
@@ -592,7 +677,7 @@ asynStatus MCS2Axis::poll(bool *moving)
 
     // Read the current theoretical position
     sprintf(pC_->outString_, ":CHAN%d:POS:TARG?", channel_);
-    comStatus = pC_->writeReadController();
+    comStatus = pC_->writeReadOnErrorDisconnect();
     if (comStatus) goto skip;
     theoryPosition = (double)strtod(pC_->inString_, NULL);
     theoryPosition /= PULSES_PER_STEP;
@@ -601,14 +686,14 @@ asynStatus MCS2Axis::poll(bool *moving)
 
   // Read the drive power on status
   sprintf(pC_->outString_, ":CHAN%d:AMPL?", channel_);
-  comStatus = pC_->writeReadController();
+  comStatus = pC_->writeReadOnErrorDisconnect();
   if (comStatus) goto skip;
   driveOn = atoi(pC_->inString_) ? 1:0;
   setIntegerParam(pC_->motorStatusPowerOn_, driveOn);
 
   // Read the currently selected positioner type
   sprintf(pC_->outString_, ":CHAN%d:PTYP?", channel_);
-  comStatus = pC_->writeReadController();
+  comStatus = pC_->writeReadOnErrorDisconnect();
   if (comStatus) goto skip;
   positionerType = atoi(pC_->inString_);
   setIntegerParam(pC_->ptyprb_, positionerType);
@@ -619,7 +704,7 @@ asynStatus MCS2Axis::poll(bool *moving)
         setIntegerParam(pC_->cal_, isCalibrated);
         setIntegerParam(pC_->ref_, isReferenced);
         sprintf(pC_->outString_, ":CHAN%d:MCLF?", channel_);
-        comStatus = pC_->writeReadController();
+        comStatus = pC_->writeReadOnErrorDisconnect();
         if (comStatus) goto skip;
         mclf = atoi(pC_->inString_);
         setIntegerParam(pC_->mclf_, mclf);
