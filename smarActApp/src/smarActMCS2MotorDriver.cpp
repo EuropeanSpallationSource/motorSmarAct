@@ -58,6 +58,7 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
   createParam(MCS2PstatString, asynParamInt32, &this->pstatrb_);   // whole positioner status word
   createParam(MCS2RefString, asynParamInt32, &this->ref_);
   createParam(MCS2CalString, asynParamInt32, &this->cal_);
+  createParam(MCS2HoldString, asynParamInt32, &this->hold_);
 
   /* Connect to MCS2 controller */
   status = pasynOctetSyncIO->connect(MCS2PortName, 0, &pasynUserController_, NULL);
@@ -238,6 +239,13 @@ asynStatus MCS2Controller::writeInt32(asynUser *pasynUser, epicsInt32 value)
     sprintf(pAxis->pC_->outString_, ":CAL%d", pAxis->axisNo_);
     status = pAxis->pC_->writeController();
   }
+  else if (function == hold_) {
+    asynPrint(pasynUser, ASYN_TRACE_INFO, "%s(%d) hold=%d\n",
+              functionName, pAxis->axisNo_, value);
+    asynMotorController::writeInt32(pasynUser, value);
+    sprintf(pAxis->pC_->outString_, ":CHAN%d:HOLD %d", pAxis->axisNo_, value);
+    status = pAxis->pC_->writeController();
+  }
   else {
     /* Call base class method */
     status = asynMotorController::writeInt32(pasynUser, value);
@@ -276,6 +284,8 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
   sprintf(pC_->outString_, ":CHAN%d:HOLD %d", channel_, HOLD_FOREVER);
   (void)pC_->writeController();
   pC_->clearErrors();
+  // Set hold time in the parameter database
+  setIntegerParam(pC_->hold_, HOLD_FOREVER);
   callParamCallbacks();
 }
 
@@ -410,6 +420,14 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
   if(sensorPresent_) {
     // closed loop move
     // Set hold time
+    {
+      int hold = HOLD_FOREVER;
+      (void)pC_->getIntegerParam(axisNo_, pC_->hold_,
+                                 &hold);
+      sprintf(pC_->outString_, ":CHAN%d:HOLD %d", channel_, hold);
+      status = pC_->writeController();
+      pC_->clearErrors();
+    }
     sprintf(pC_->outString_, ":CHAN%d:MMOD %d", channel_, relative > 0 ? 1 : 0);
     status = pC_->writeController();
     // Set acceleration
@@ -463,9 +481,14 @@ asynStatus MCS2Axis::home(double minVelocity, double maxVelocity, double acceler
   pC_->clearErrors();
 
   // Set hold time
-  sprintf(pC_->outString_, ":CHAN%d:HOLD %d", channel_, HOLD_FOREVER);
-  status = pC_->writeController();
-  pC_->clearErrors();
+  {
+    int hold = HOLD_FOREVER;
+    (void)pC_->getIntegerParam(axisNo_, pC_->hold_,
+                               &hold);
+    sprintf(pC_->outString_, ":CHAN%d:HOLD %d", channel_, hold);
+    status = pC_->writeController();
+    pC_->clearErrors();
+  }
   // Set acceleration
   sprintf(pC_->outString_, ":CHAN%d:ACC %f", channel_, acceleration*PULSES_PER_STEP);
   status = pC_->writeController();

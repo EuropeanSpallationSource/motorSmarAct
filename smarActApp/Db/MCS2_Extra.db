@@ -15,6 +15,14 @@ record(longout, "$(P)$(M)setMclFreq") {
     field(PINI,"YES")
 }
 
+record(longout, "$(P)$(M)hold") {
+    field(DESC,"hold time")
+    field(DTYP,"asynInt32")
+    field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))HOLD")
+    field(VAL, "-1")
+    field(PINI,"YES")
+}
+
 record(mbbo, "$(P)$(M)setPositionerType"){
   field(DESC, "set positioner type")
   field(DTYP, "asynInt32")
