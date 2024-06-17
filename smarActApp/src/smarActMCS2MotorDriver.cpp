@@ -620,7 +620,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   }
 
   skip:
-  setIntegerParam(pC_->motorStatusProblem_, comStatus ? 1:0);
+  setIntegerParam(pC_->motorStatusCommsError_, comStatus ? 1:0);
   callParamCallbacks();
   return comStatus ? asynError : asynSuccess;
 }
