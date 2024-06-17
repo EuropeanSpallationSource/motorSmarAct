@@ -292,10 +292,13 @@ asynStatus MCS2Axis::reportHelperCheckError(const char *scpi_leaf, char *input, 
   snprintf(outString, sizeof(outString), ":CHAN%d%s", axisNo_, scpi_leaf);
   memset(input, 0, maxChars);
   status = pC_->writeReadController(outString, input, maxChars, &nread, DEFAULT_CONTROLLER_TIMEOUT);
-  asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO, "%s(%d) outString='%s' input='%s' status=%d\n",
-            functionName, axisNo_, outString, input, (int)status);
   if (status == asynTimeout)  {
+    asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO, "%s(%d) outString='%s' input='%s' status=%d\n",
+              functionName, axisNo_, outString, input, (int)status);
     pC_->clearErrors();
+  } else {
+    asynPrint(pC_->pasynUserController_, ASYN_TRACEIO_DRIVER, "%s(%d) outString='%s' input='%s' status=%d\n",
+              functionName, axisNo_, outString, input, (int)status);
   }
   return status;
 }
@@ -601,6 +604,19 @@ asynStatus MCS2Axis::poll(bool *moving)
         if (comStatus) goto skip;
         mclf = atoi(pC_->inString_);
         setIntegerParam(pC_->mclf_, mclf);
+#if defined  motorHighLimitROString && defined motorLowLimitROString
+        {
+          double fValueHigh = 0.0, fValueLow = 0.0;
+          comStatus = reportHelperDouble(":RLIM:MIN?", &fValueLow);
+          if (comStatus) goto skip;
+          comStatus = reportHelperDouble(":RLIM:MAX?", &fValueHigh);
+          if (comStatus) goto skip;
+          asynPrint(pC_->pasynUserController_, ASYN_TRACEIO_DRIVER, "%s(%d) rlimmin=%f rlimmax=%f\n",
+                    "poll", axisNo_, fValueLow, fValueHigh);
+          setDoubleParam(pC_->motorHighLimitRO_, fValueHigh / PULSES_PER_STEP);
+          setDoubleParam(pC_->motorLowLimitRO_, fValueLow / PULSES_PER_STEP);
+        }
+#endif
   }
 
   skip:
