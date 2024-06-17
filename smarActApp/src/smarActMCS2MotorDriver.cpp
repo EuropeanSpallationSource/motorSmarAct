@@ -341,7 +341,7 @@ void MCS2Axis::report(FILE *fp, int level)
       char in_position_threshold[32];
       char in_position_delay[32];
       char target_reached_threshold[32];
-      char target_hold_threshold[32];
+      char hold_time[32];
     } buf;
     int channelState = -1;
     int vel = -1;
@@ -367,9 +367,7 @@ void MCS2Axis::report(FILE *fp, int level)
     REPORTHELPERCHECKERROR(":INP:THR?", buf.in_position_threshold);
     REPORTHELPERCHECKERROR(":INP:DEL?", buf.in_position_delay);
     REPORTHELPERCHECKERROR(":TUN:THR:TRE?", buf.target_reached_threshold);
-    // Command does not exist REPORTHELPERCHECKERROR(":TUN:THR:THO?", buf.target_hold_threshold);
-
-
+    REPORTHELPERCHECKERROR(":HOLD?", buf.hold_time);
 
     fprintf(fp, "  axis %d\n"
                 " positioner type %d\n"
@@ -380,7 +378,7 @@ void MCS2Axis::report(FILE *fp, int level)
                 " in_position_threshold %s\n"
                 " in_position_delay %s\n"
                 " target_reached_threshold %s\n"
-                " target_hold_threshold %s\n"
+                " hold_time %s\n"
                 " velocity %d\n"
                 " acceleration %d\n"
                 " max closed loop frequency %d\n"
@@ -392,7 +390,7 @@ void MCS2Axis::report(FILE *fp, int level)
             buf.in_position_threshold,
             buf.in_position_delay,
             buf.target_reached_threshold,
-            buf.target_hold_threshold,
+            buf.hold_time,
             vel, acc, mclf, followError, error, temp);
     pC_->clearErrors();
   }
