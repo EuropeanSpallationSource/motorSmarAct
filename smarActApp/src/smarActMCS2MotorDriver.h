@@ -116,7 +116,8 @@ friend class MCS2Controller;
 class epicsShareClass MCS2Controller : public asynMotorController {
 public:
   MCS2Controller(const char *portName, const char *MCS2PortName, int numAxes, double movingPollPeriod, double idlePollPeriod, int unusedMask = 0);
-  asynStatus writeReadOnErrorDisconnect(void);
+  void handleStatusChange(asynStatus status);
+  asynStatus writeReadHandleDisconnect(void);
   virtual asynStatus clearErrors();
 
   /* These are the methods that we override from asynMotorDriver */
@@ -128,6 +129,7 @@ public:
   MCS2Axis* getAxis(int axisNo);
 
 protected:
+  asynStatus oldStatus_;
   int mclf_; /**< MCL frequency */
 #define FIRST_MCS2_PARAM mclf_
   int ptyp_; /**< positioner type */
