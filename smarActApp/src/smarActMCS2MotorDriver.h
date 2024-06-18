@@ -82,6 +82,7 @@ const unsigned short   STOP_ON_REF_FOUND       = 0x0020;
 #define MCS2PstatString "PSTAT"
 #define MCS2RefString "REF"
 #define MCS2CalString "CAL"
+#define MCS2ErrTxtString "ErrTxt"
 #define MCS2HoldString "HOLD"
 
 class epicsShareClass MCS2Axis : public asynMotorAxis
@@ -137,6 +138,7 @@ protected:
   int pstatrb_; /**< positoner status word readback */
   int ref_;  /**< reference command */
   int cal_;  /**< calibration command */
+  int errTxt_;
   int hold_; /** hold time */
 #define LAST_MCS2_PARAM hold_
 #define NUM_MCS2_PARAMS (&LAST_MCS2_PARAM - &FIRST_MCS2_PARAM + 1)

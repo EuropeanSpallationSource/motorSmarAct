@@ -58,6 +58,8 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
   createParam(MCS2PstatString, asynParamInt32, &this->pstatrb_);   // whole positioner status word
   createParam(MCS2RefString, asynParamInt32, &this->ref_);
   createParam(MCS2CalString, asynParamInt32, &this->cal_);
+  createParam(MCS2ErrTxtString, asynParamOctet, &this->errTxt_);
+
   createParam(MCS2HoldString, asynParamInt32, &this->hold_);
 
   /* Connect to MCS2 controller */
@@ -712,6 +714,27 @@ asynStatus MCS2Axis::poll(bool *moving)
   skip:
   if (comStatus) initialPollDone_ = 0;
   setIntegerParam(pC_->motorStatusCommsError_, comStatus ? 1:0);
+  {
+    const char *strErrorMessage = "";
+    if (comStatus)
+      strErrorMessage = "E: Communication";
+    else if (!isReferenced)
+      strErrorMessage = "E: Axis not homed";
+    else if (!isCalibrated)
+      strErrorMessage = "E: Not calibrated";
+    else if (movementFailed)
+      strErrorMessage = "E: movement failed";
+    else if (followLimitReached)
+      strErrorMessage = "E: follow limit";
+    else if (chanState & CH_STATE_POSITIONER_FAULT)
+      strErrorMessage = "positioner fault";
+    else if (chanState & CH_STATE_POSITIONER_OVERLOAD)
+      strErrorMessage = "positioner overload";
+    else if (chanState & CH_STATE_OVERTEMP)
+      strErrorMessage = "overtemperature";
+
+    setStringParam(pC_->errTxt_, strErrorMessage);
+  }
   callParamCallbacks();
   return comStatus ? asynError : asynSuccess;
 }
