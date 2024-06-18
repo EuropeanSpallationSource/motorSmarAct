@@ -734,6 +734,11 @@ asynStatus MCS2Axis::poll(bool *moving)
       strErrorMessage = "overtemperature";
 
     setStringParam(pC_->errTxt_, strErrorMessage);
+    /* ESS motor has a MsgTxt variable */
+#ifdef motorMessageTextString
+    updateMsgTxtFromDriver(strErrorMessage);
+#endif
+
   }
   callParamCallbacks();
   return comStatus ? asynError : asynSuccess;
