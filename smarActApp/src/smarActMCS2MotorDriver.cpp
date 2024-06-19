@@ -58,6 +58,7 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
   createParam(MCS2PstatString, asynParamInt32, &this->pstatrb_);   // whole positioner status word
   createParam(MCS2RefString, asynParamInt32, &this->ref_);
   createParam(MCS2CalString, asynParamInt32, &this->cal_);
+  createParam(MCS2ReadbackString, asynParamFloat64, &this->readback_);
   createParam(MCS2ErrTxtString, asynParamOctet, &this->errTxt_);
 
   createParam(MCS2HoldString, asynParamInt32, &this->hold_);
@@ -660,8 +661,8 @@ asynStatus MCS2Axis::poll(bool *moving)
     comStatus = pC_->writeReadHandleDisconnect();
     if (comStatus) goto skip;
     encoderPosition = (double)strtod(pC_->inString_, NULL);
-    encoderPosition /= PULSES_PER_STEP;
-    setDoubleParam(pC_->motorEncoderPosition_, encoderPosition);
+    setDoubleParam(pC_->readback_, encoderPosition);
+    setDoubleParam(pC_->motorEncoderPosition_, encoderPosition / PULSES_PER_STEP);
 
     // Read the current theoretical position
     sprintf(pC_->outString_, ":CHAN%d:POS:TARG?", channel_);
