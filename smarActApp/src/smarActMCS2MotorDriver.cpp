@@ -41,7 +41,14 @@ static const char *driverName = "SmarActMCS2MotorDriver";
 MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, int numAxes,
                                double movingPollPeriod, double idlePollPeriod, int unusedMask)
   :  asynMotorController(portName, numAxes, NUM_MCS2_PARAMS,
-                         0, 0,
+#ifdef SMARACT_ASYN_ASYNPARAMINT64
+                         asynInt64Mask |
+#endif
+                         0,
+#ifdef SMARACT_ASYN_ASYNPARAMINT64
+                         asynInt64Mask |
+#endif
+                         0,
                          ASYN_CANBLOCK | ASYN_MULTIDEVICE,
                          1, // autoconnect
                          0, 0)  // Default priority and stack size
@@ -58,7 +65,12 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
   createParam(MCS2PstatString, asynParamInt32, &this->pstatrb_);   // whole positioner status word
   createParam(MCS2RefString, asynParamInt32, &this->ref_);
   createParam(MCS2CalString, asynParamInt32, &this->cal_);
-  createParam(MCS2ReadbackString, asynParamFloat64, &this->readback_);
+  createParam(MCS2FReadbackString, asynParamFloat64, &this->freadback_);
+#ifdef SMARACT_ASYN_ASYNPARAMINT64
+  createParam(MCS2IReadbackString, asynParamInt64, &this->ireadback_);
+#else
+  this->ireadback_ = -1;
+#endif
   createParam(MCS2ErrTxtString, asynParamOctet, &this->errTxt_);
 
   createParam(MCS2HoldString, asynParamInt32, &this->hold_);
@@ -658,9 +670,11 @@ asynStatus MCS2Axis::poll(bool *moving)
     comStatus = pC_->writeReadHandleDisconnect();
     if (comStatus) goto skip;
     encoderPosition = (double)strtod(pC_->inString_, NULL);
-    setDoubleParam(pC_->readback_, encoderPosition);
+    setDoubleParam(pC_->freadback_, encoderPosition);
     setDoubleParam(pC_->motorEncoderPosition_, encoderPosition / PULSES_PER_STEP);
-
+#ifdef SMARACT_ASYN_ASYNPARAMINT64
+    pC_->setInteger64Param(channel_, pC_->ireadback_, atoll(pC_->inString_));
+#endif
     // Read the current theoretical position
     sprintf(pC_->outString_, ":CHAN%d:POS:TARG?", channel_);
     comStatus = pC_->writeReadHandleDisconnect();
