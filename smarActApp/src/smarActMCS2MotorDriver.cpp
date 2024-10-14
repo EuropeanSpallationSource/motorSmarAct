@@ -382,10 +382,13 @@ asynStatus MCS2Axis::reportHelperCheckError(const char *scpi_leaf, char *input, 
   snprintf(outString, sizeof(outString), ":CHAN%d%s", axisNo_, scpi_leaf);
   memset(input, 0, maxChars);
   status = pC_->writeReadController(outString, input, maxChars, &nread, DEFAULT_CONTROLLER_TIMEOUT);
-  asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO, "%s(%d) outString='%s' input='%s' status=%d\n",
-            functionName, axisNo_, outString, input, (int)status);
   if (status == asynTimeout)  {
+    asynPrint(pC_->pasynUserController_, ASYN_TRACE_ERROR, "%s(%d) outString='%s' input='%s' status=%d\n",
+              functionName, axisNo_, outString, input, (int)status);
     pC_->clearErrors();
+  } else {
+    asynPrint(pC_->pasynUserController_, ASYN_TRACEIO_DRIVER, "%s(%d) outString='%s' input='%s' status=%d\n",
+              functionName, axisNo_, outString, input, (int)status);
   }
   return status;
 }
