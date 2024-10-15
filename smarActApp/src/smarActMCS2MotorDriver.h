@@ -100,6 +100,7 @@ const unsigned short   STOP_ON_REF_FOUND       = 0x0020;
 #define MCS2IReadbackString "IREADBACK"
 #define MCS2ErrTxtString "ErrTxt"
 #define MCS2HoldString "HOLD"
+#define MCS2OpenloopString "OPENLOOP"
 
 class epicsShareClass MCS2Axis : public asynMotorAxis
 {
@@ -113,6 +114,7 @@ public:
   asynStatus stop(double acceleration);
   asynStatus setPosition(double position);
 
+
 private:
   MCS2Controller *pC_;      /**< Pointer to the asynMotorController to which this axis belongs.
                                 *   Abbreviated because it is used very frequently */
@@ -121,6 +123,7 @@ private:
   PositionType stepTarget_;
   //asynStatus comStatus_;
   int initialPollDone_;
+  int openLoop_;
   asynStatus initialPoll(void);
   asynStatus reportHelperCheckError(const char *scpi_leaf, char *input, size_t maxChars);
 #define REPORTHELPERCHECKERROR(a,b) reportHelperCheckError(a,b,sizeof(b))
@@ -158,6 +161,7 @@ protected:
   int ireadback_; /** readback in picometer as integer */
   int errTxt_;
   int hold_; /** hold time */
+  int openLoop_;
 #define LAST_MCS2_PARAM hold_
 #define NUM_MCS2_PARAMS (&LAST_MCS2_PARAM - &FIRST_MCS2_PARAM + 1)
 

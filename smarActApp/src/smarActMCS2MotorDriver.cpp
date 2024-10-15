@@ -74,6 +74,7 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
   createParam(MCS2ErrTxtString, asynParamOctet, &this->errTxt_);
 
   createParam(MCS2HoldString, asynParamInt32, &this->hold_);
+  createParam(MCS2OpenloopString, asynParamInt32, &this->openLoop_);
 
   /* Connect to MCS2 controller */
   status = pasynOctetSyncIO->connect(MCS2PortName, 0, &pasynUserController_, NULL);
@@ -329,6 +330,12 @@ asynStatus MCS2Controller::writeInt32(asynUser *pasynUser, epicsInt32 value)
     sprintf(pAxis->pC_->outString_, ":CHAN%d:HOLD %d", pAxis->axisNo_, value);
     status = pAxis->pC_->writeController();
   }
+  else if (function == openLoop_) {
+    asynPrint(pasynUser, ASYN_TRACE_INFO, "%s(%d) openLoop=%d\n",
+              functionName, pAxis->axisNo_, value);
+    asynMotorController::writeInt32(pasynUser, value);
+    pAxis->openLoop_ = value;
+  }
   else {
     /* Call base class method */
     status = asynMotorController::writeInt32(pasynUser, value);
@@ -363,6 +370,7 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
   channel_ = axisNo;
   stepTarget_ = 0;
   initialPollDone_ = 0;
+  openLoop_ = 0;
 
   // Set hold time in the parameter database
   setIntegerParam(pC_->hold_, HOLD_FOREVER);
@@ -500,7 +508,7 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
    *  - relative=1
    *  - step=4
    */
-  if(sensorPresent_) {
+  if(sensorPresent_ && !openLoop_) {
     // closed loop move
     sprintf(pC_->outString_, ":CHAN%d:MMOD %d", channel_, relative > 0 ? 1 : 0);
     status = pC_->writeController();
@@ -745,6 +753,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   callParamCallbacks();
   return comStatus ? asynError : asynSuccess;
 }
+
 
 /** Code for iocsh registration */
 static const iocshArg MCS2CreateControllerArg0 = {"Port name", iocshArgString};
