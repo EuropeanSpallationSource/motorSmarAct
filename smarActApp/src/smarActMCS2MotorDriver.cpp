@@ -508,6 +508,13 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
    *  - relative=1
    *  - step=4
    */
+  unsigned traceMask = ASYN_TRACE_INFO;
+  asynPrint(pC_->pasynUserController_, traceMask,
+            "%smove(%d) position=%f relative=%d sensorPresent=%d openLoop=%d minVelocity=%f maxVelocity=%f"
+            " acceleration=%f\n",
+            "MCS2Axis::", axisNo_, position, relative, sensorPresent_, openLoop_,
+            minVelocity, maxVelocity, acceleration);
+
   if(sensorPresent_ && !openLoop_) {
     // closed loop move
     sprintf(pC_->outString_, ":CHAN%d:MMOD %d", channel_, relative > 0 ? 1 : 0);
