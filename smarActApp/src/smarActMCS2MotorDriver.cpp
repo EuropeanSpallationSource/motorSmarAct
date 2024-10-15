@@ -75,6 +75,7 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
 
   createParam(MCS2HoldString, asynParamInt32, &this->hold_);
   createParam(MCS2OpenloopString, asynParamInt32, &this->openLoop_);
+  createParam(MCS2Vel2ClfString, asynParamFloat64, &this->vel2clf_);
 
   /* Connect to MCS2 controller */
   status = pasynOctetSyncIO->connect(MCS2PortName, 0, &pasynUserController_, NULL);
@@ -371,6 +372,7 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
   stepTarget_ = 0;
   initialPollDone_ = 0;
   openLoop_ = 0;
+  vel2clf_ = 0;
 
   // Set hold time in the parameter database
   setIntegerParam(pC_->hold_, HOLD_FOREVER);
@@ -551,12 +553,18 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
     // Set mode; 4 == STEP
     sprintf(pC_->outString_, ":CHAN%d:MMOD 4", channel_);
     status = pC_->writeController();
+    double frequency = maxVelocity;
     // Set frequency; range 1..20000 Hz
-    unsigned short frequency = (unsigned short)maxVelocity;
+    if (this->vel2clf_) {
+      frequency = frequency * PULSES_PER_STEP * vel2clf_;
+    }
     if(frequency >= MAX_FREQUENCY) {
       frequency = MAX_FREQUENCY;
     }
-    sprintf(pC_->outString_, ":CHAN%d:STEP:FREQ %u", channel_, frequency);
+    asynPrint(pC_->pasynUserController_, traceMask,
+              "%smove(%d) relative vel2clf_=%f frequency=%g\n",
+              "MCS2Axis::", axisNo_, this->vel2clf_, frequency);
+    sprintf(pC_->outString_, ":CHAN%d:STEP:FREQ %u", channel_, (unsigned short)frequency);
     status = pC_->writeController();
     // Do move
     sprintf(pC_->outString_, ":MOVE%d %lld", channel_, dtg);
@@ -777,6 +785,18 @@ asynStatus MCS2Axis::poll(bool *moving)
   return comStatus ? asynError : asynSuccess;
 }
 
+asynStatus MCS2Axis::setDoubleParam(int function, double value) {
+  asynStatus status;
+  if (function == pC_->vel2clf_) {
+    asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+            "%setDoubleParam(%d) function=vel2clf value=%f\n",
+              "MCS2Axis::", axisNo_, value);
+    this->vel2clf_ = value;
+  }
+  // Call the base class method
+  status = asynMotorAxis::setDoubleParam(function, value);
+  return status;
+}
 
 /** Code for iocsh registration */
 static const iocshArg MCS2CreateControllerArg0 = {"Port name", iocshArgString};

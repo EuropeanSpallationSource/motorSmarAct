@@ -101,6 +101,7 @@ const unsigned short   STOP_ON_REF_FOUND       = 0x0020;
 #define MCS2ErrTxtString "ErrTxt"
 #define MCS2HoldString "HOLD"
 #define MCS2OpenloopString "OPENLOOP"
+#define MCS2Vel2ClfString "VEL2CLF"
 
 class epicsShareClass MCS2Axis : public asynMotorAxis
 {
@@ -113,6 +114,7 @@ public:
   asynStatus home(double min_velocity, double max_velocity, double acceleration, int forwards);
   asynStatus stop(double acceleration);
   asynStatus setPosition(double position);
+  asynStatus setDoubleParam(int function, double value);
 
 
 private:
@@ -124,6 +126,7 @@ private:
   //asynStatus comStatus_;
   int initialPollDone_;
   int openLoop_;
+  double vel2clf_;
   asynStatus initialPoll(void);
   asynStatus reportHelperCheckError(const char *scpi_leaf, char *input, size_t maxChars);
 #define REPORTHELPERCHECKERROR(a,b) reportHelperCheckError(a,b,sizeof(b))
@@ -162,6 +165,7 @@ protected:
   int errTxt_;
   int hold_; /** hold time */
   int openLoop_;
+  int vel2clf_; /** velocity into frequency */
 #define LAST_MCS2_PARAM hold_
 #define NUM_MCS2_PARAMS (&LAST_MCS2_PARAM - &FIRST_MCS2_PARAM + 1)
 
