@@ -440,6 +440,10 @@ void MCS2Axis::report(FILE *fp, int level)
       char in_position_delay[32];
       char target_reached_threshold[32];
       char hold_time[32];
+      char step_freq[32];
+      char step_ampl[32];
+      char diag_clf_max[32];
+      char diag_clf_aver[32];
     } buf;
     int channelState = -1;
     int vel = -1;
@@ -466,6 +470,10 @@ void MCS2Axis::report(FILE *fp, int level)
     REPORTHELPERCHECKERROR(":INP:DEL?", buf.in_position_delay);
     REPORTHELPERCHECKERROR(":TUN:THR:TRE?", buf.target_reached_threshold);
     REPORTHELPERCHECKERROR(":HOLD?", buf.hold_time);
+    REPORTHELPERCHECKERROR(":STEP:FREQ?", buf.step_freq);
+    REPORTHELPERCHECKERROR(":STEP:AMPL?", buf.step_ampl);
+    REPORTHELPERCHECKERROR(":DIAG:CLF:MAX?", buf.diag_clf_max);
+    REPORTHELPERCHECKERROR(":DIAG:CLF:AVER?", buf.diag_clf_aver);
 
     fprintf(fp, "  axis %d\n"
                 " positioner type %d\n"
@@ -477,6 +485,10 @@ void MCS2Axis::report(FILE *fp, int level)
                 " in_position_delay %s\n"
                 " target_reached_threshold %s\n"
                 " hold_time %s\n"
+                " step_freq %s\n"
+                " step_ampl %s\n"
+                " diag_clf_max %s\n"
+                " diag_clf_aver %s\n"
                 " velocity %d\n"
                 " acceleration %d\n"
                 " max closed loop frequency %d\n"
@@ -489,6 +501,10 @@ void MCS2Axis::report(FILE *fp, int level)
             buf.in_position_delay,
             buf.target_reached_threshold,
             buf.hold_time,
+            buf.step_freq,
+            buf.step_ampl,
+            buf.diag_clf_max,
+            buf.diag_clf_aver,
             vel, acc, mclf, followError, error, temp);
     pC_->clearErrors();
   }
