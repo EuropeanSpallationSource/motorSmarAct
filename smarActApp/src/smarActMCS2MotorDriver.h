@@ -100,7 +100,6 @@ const unsigned short   STOP_ON_REF_FOUND       = 0x0020;
 #define MCS2IReadbackString "IREADBACK"
 #define MCS2ErrTxtString "ErrTxt"
 #define MCS2OpenloopString "OPENLOOP"
-#define MCS2Vel2ClfString "VEL2CLF"
 #define MCS2STEPFREQString "STEPFREQ"
 #define MCS2STEPCNTString "STEPCNT"
 #define MCS2STEPSIZEFString "STEPSIZEF"
@@ -130,7 +129,6 @@ private:
   //asynStatus comStatus_;
   int initialPollDone_;
   int openLoop_;
-  double vel2clf_;
   double stepsizef_;
   double stepsizer_;
   asynStatus initialPoll(void);
@@ -170,7 +168,6 @@ protected:
   int ireadback_; /** readback in picometer as integer */
   int errTxt_;
   int openLoop_;
-  int vel2clf_; /** velocity into frequency */
   int stepfreq_; /** step frequency */ /* 1 .. 20000 */
   int stepcnt_;  /** step count (to move) */ /* -100000 .. + 100000 */
   int stepsizef_; /** size of an open loop step, forward, in pm */
