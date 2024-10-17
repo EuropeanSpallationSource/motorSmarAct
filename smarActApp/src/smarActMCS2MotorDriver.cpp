@@ -76,6 +76,8 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
   createParam(MCS2HoldString, asynParamInt32, &this->hold_);
   createParam(MCS2OpenloopString, asynParamInt32, &this->openLoop_);
   createParam(MCS2Vel2ClfString, asynParamFloat64, &this->vel2clf_);
+  createParam(MCS2STEPFREQString, asynParamInt32, &this->stepfreq_);
+  createParam(MCS2STEPCNTString, asynParamFloat64, &this->stepcnt_);
 
   /* Connect to MCS2 controller */
   status = pasynOctetSyncIO->connect(MCS2PortName, 0, &pasynUserController_, NULL);
@@ -337,6 +339,25 @@ asynStatus MCS2Controller::writeInt32(asynUser *pasynUser, epicsInt32 value)
     asynMotorController::writeInt32(pasynUser, value);
     pAxis->openLoop_ = value;
   }
+  else if (function == stepcnt_) {
+    int frequency;
+    (void)getIntegerParam(pAxis->axisNo_, stepfreq_,  &frequency);
+    if(frequency >= MAX_FREQUENCY) {
+      frequency = MAX_FREQUENCY;
+    }
+    asynPrint(pasynUser, ASYN_TRACE_INFO, "%s(%d) move stepcnt=%d frequency=%d\n",
+              functionName, pAxis->axisNo_, value, frequency);
+    // Set mode; 4 == STEP
+    sprintf(outString_, ":CHAN%d:MMOD 4", pAxis->axisNo_);
+    status = writeController();
+    sprintf(outString_, ":CHAN%d:STEP:FREQ %u", pAxis->axisNo_, (unsigned short)frequency);
+    status = writeController();
+    // Do move
+    sprintf(outString_, ":MOVE%d %d", pAxis->axisNo_, value);
+    status = writeController();
+    /* reset the value inside the asyn parameters */
+    asynMotorController::writeInt32(pasynUser, 0);
+  }
   else {
     /* Call base class method */
     status = asynMotorController::writeInt32(pasynUser, value);
@@ -561,6 +582,8 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
     if(frequency >= MAX_FREQUENCY) {
       frequency = MAX_FREQUENCY;
     }
+    setIntegerParam(pC_->stepfreq_, (int)frequency);
+
     asynPrint(pC_->pasynUserController_, traceMask,
               "%smove(%d) relative vel2clf_=%f frequency=%g\n",
               "MCS2Axis::", axisNo_, this->vel2clf_, frequency);

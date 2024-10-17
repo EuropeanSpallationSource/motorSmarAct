@@ -102,6 +102,8 @@ const unsigned short   STOP_ON_REF_FOUND       = 0x0020;
 #define MCS2HoldString "HOLD"
 #define MCS2OpenloopString "OPENLOOP"
 #define MCS2Vel2ClfString "VEL2CLF"
+#define MCS2STEPFREQString "STEPFREQ"
+#define MCS2STEPCNTString "STEPCNT"
 
 class epicsShareClass MCS2Axis : public asynMotorAxis
 {
@@ -163,9 +165,12 @@ protected:
   int freadback_; /** readback in picometer as floating point*/
   int ireadback_; /** readback in picometer as integer */
   int errTxt_;
-  int hold_; /** hold time */
   int openLoop_;
   int vel2clf_; /** velocity into frequency */
+  int stepfreq_; /** step frequency */ /* 1 .. 20000 */
+  int stepcnt_;  /** step count (to move) */ /* -100000 .. + 100000 */
+  int hold_; /** hold time */
+
 #define LAST_MCS2_PARAM hold_
 #define NUM_MCS2_PARAMS (&LAST_MCS2_PARAM - &FIRST_MCS2_PARAM + 1)
 
