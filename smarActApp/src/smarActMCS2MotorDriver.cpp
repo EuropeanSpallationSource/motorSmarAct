@@ -78,6 +78,8 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
   createParam(MCS2Vel2ClfString, asynParamFloat64, &this->vel2clf_);
   createParam(MCS2STEPFREQString, asynParamInt32, &this->stepfreq_);
   createParam(MCS2STEPCNTString, asynParamFloat64, &this->stepcnt_);
+  createParam(MCS2STEPSIZEFString, asynParamFloat64, &this->stepsizef_);
+  createParam(MCS2STEPSIZERString, asynParamFloat64, &this->stepsizer_);
 
   /* Connect to MCS2 controller */
   status = pasynOctetSyncIO->connect(MCS2PortName, 0, &pasynUserController_, NULL);
@@ -394,6 +396,8 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
   initialPollDone_ = 0;
   openLoop_ = 0;
   vel2clf_ = 0;
+  stepsizef_ = 0.0;
+  stepsizer_ = 0.0;
 
   // Set hold time in the parameter database
   setIntegerParam(pC_->hold_, HOLD_FOREVER);
@@ -569,11 +573,27 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
     status = pC_->writeController();
   } else {
     // open loop move
-    PositionType dtg = (PositionType)(position - stepTarget_);  // distance to go
-    stepTarget_ = (PositionType)position;       // store position in global scope
-    // Set mode; 4 == STEP
-    sprintf(pC_->outString_, ":CHAN%d:MMOD 4", channel_);
-    status = pC_->writeController();
+    PositionType dtg = 0;   // distance to go
+    double steps_to_go_f = 0;   // steps to go in floating point
+    if (relative) {
+      dtg = (PositionType)(position);
+      stepTarget_ += dtg;  // store position in global scope
+    } else {
+      dtg = (PositionType)(position - stepTarget_);
+      stepTarget_ = (PositionType)position;       // store position in global scope
+    }
+    long long steps_to_go_i  = dtg;
+    if (stepsizef_ && stepsizer_) {
+      steps_to_go_f = (double)dtg; // may change, see below
+      // Both directions do have a factor to scale pm into steps
+      steps_to_go_f *= PULSES_PER_STEP; // now we are in pm
+      if (steps_to_go_f > 0) {
+        steps_to_go_f /= stepsizef_; // step size in pm
+      } else if (steps_to_go_f < 0) {
+        steps_to_go_f /= stepsizer_; // step size in pm
+      }
+      steps_to_go_i  = (long long)steps_to_go_f; // Update if needed
+    }
     double frequency = maxVelocity;
     // Set frequency; range 1..20000 Hz
     if (this->vel2clf_) {
@@ -583,14 +603,20 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
       frequency = MAX_FREQUENCY;
     }
     setIntegerParam(pC_->stepfreq_, (int)frequency);
-
     asynPrint(pC_->pasynUserController_, traceMask,
-              "%smove(%d) relative vel2clf_=%f frequency=%g\n",
-              "MCS2Axis::", axisNo_, this->vel2clf_, frequency);
+              "%smove(%d) relative vel2clf_=%f frequency=%f dtg=%lld steps_to_go_i=%lld\n",
+              "MCS2Axis::", axisNo_, this->vel2clf_, frequency,
+              (long long)dtg, steps_to_go_i);
+    if (!steps_to_go_i)
+      return status;
+    // Set mode; 4 == STEP
+    sprintf(pC_->outString_, ":CHAN%d:MMOD 4", channel_);
+    status = pC_->writeController();
+
     sprintf(pC_->outString_, ":CHAN%d:STEP:FREQ %u", channel_, (unsigned short)frequency);
     status = pC_->writeController();
     // Do move
-    sprintf(pC_->outString_, ":MOVE%d %lld", channel_, dtg);
+    sprintf(pC_->outString_, ":MOVE%d %lld", channel_, steps_to_go_i);
     status = pC_->writeController();
     setDoubleParam(pC_->motorPosition_, (double)stepTarget_);
   }
@@ -815,6 +841,18 @@ asynStatus MCS2Axis::setDoubleParam(int function, double value) {
             "%setDoubleParam(%d) function=vel2clf value=%f\n",
               "MCS2Axis::", axisNo_, value);
     this->vel2clf_ = value;
+  }
+  else if (function == pC_->stepsizef_) {
+    asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+            "%setDoubleParam(%d) function=stepsizef value=%f\n",
+              "MCS2Axis::", axisNo_, value);
+    this->stepsizef_ = value;
+  }
+  else if (function == pC_->stepsizer_) {
+    asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+            "%setDoubleParam(%d) function=stepsizer value=%f\n",
+              "MCS2Axis::", axisNo_, value);
+    this->stepsizer_ = value;
   }
   // Call the base class method
   status = asynMotorAxis::setDoubleParam(function, value);

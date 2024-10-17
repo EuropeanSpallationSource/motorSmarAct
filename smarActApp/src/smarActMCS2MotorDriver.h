@@ -99,11 +99,13 @@ const unsigned short   STOP_ON_REF_FOUND       = 0x0020;
 #define MCS2FReadbackString "FREADBACK"
 #define MCS2IReadbackString "IREADBACK"
 #define MCS2ErrTxtString "ErrTxt"
-#define MCS2HoldString "HOLD"
 #define MCS2OpenloopString "OPENLOOP"
 #define MCS2Vel2ClfString "VEL2CLF"
 #define MCS2STEPFREQString "STEPFREQ"
 #define MCS2STEPCNTString "STEPCNT"
+#define MCS2STEPSIZEFString "STEPSIZEF"
+#define MCS2STEPSIZERString "STEPSIZER"
+#define MCS2HoldString "HOLD"
 
 class epicsShareClass MCS2Axis : public asynMotorAxis
 {
@@ -129,6 +131,8 @@ private:
   int initialPollDone_;
   int openLoop_;
   double vel2clf_;
+  double stepsizef_;
+  double stepsizer_;
   asynStatus initialPoll(void);
   asynStatus reportHelperCheckError(const char *scpi_leaf, char *input, size_t maxChars);
 #define REPORTHELPERCHECKERROR(a,b) reportHelperCheckError(a,b,sizeof(b))
@@ -169,6 +173,8 @@ protected:
   int vel2clf_; /** velocity into frequency */
   int stepfreq_; /** step frequency */ /* 1 .. 20000 */
   int stepcnt_;  /** step count (to move) */ /* -100000 .. + 100000 */
+  int stepsizef_; /** size of an open loop step, forward, in pm */
+  int stepsizer_; /** size of an open loop step, reverse==backward, in pm */
   int hold_; /** hold time */
 
 #define LAST_MCS2_PARAM hold_
