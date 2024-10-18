@@ -551,6 +551,14 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
    *  - step=4
    */
   unsigned traceMask = ASYN_TRACE_INFO;
+  double steps_to_go_f = 0;
+  if (relative) {
+    steps_to_go_f = position;
+    stepTargetPos_nm_ += position;  // store position in global scope
+  } else {
+    steps_to_go_f = position - stepTargetPos_nm_;
+    stepTargetPos_nm_ = position;       // store position in global scope
+  }
   asynPrint(pC_->pasynUserController_, traceMask,
             "%smove(%d) position=%f relative=%d sensorPresent=%d openLoop=%d minVelocity=%f maxVelocity=%f"
             " acceleration=%f\n",
@@ -585,14 +593,6 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
        * The effective travelling distance by one step is dependent
        * on the direction, thus 2 variables. step size forward/reverse
        */
-      double steps_to_go_f = 0;
-      if (relative) {
-        steps_to_go_f = position;
-        stepTargetPos_nm_ += position;  // store position in global scope
-      } else {
-        steps_to_go_f = position - stepTargetPos_nm_;
-        stepTargetPos_nm_ = position;       // store position in global scope
-      }
       setDoubleParam(pC_->motorPosition_, stepTargetPos_nm_);
       steps_to_go_f *= PULSES_PER_STEP; // now we are in pm
       if (steps_to_go_f > 0) {
@@ -624,7 +624,7 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
     }
     setIntegerParam(pC_->stepfreq_, (int)frequency);
     asynPrint(pC_->pasynUserController_, traceMask,
-              "%smove(%d) relative frequency=%f steps_to_go_i=%lld\n",
+              "%smove(%d) frequency=%f steps_to_go_i=%lld\n",
               "MCS2Axis::", axisNo_, frequency, steps_to_go_i);
     if (!steps_to_go_i)
       return status;
