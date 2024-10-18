@@ -125,7 +125,8 @@ private:
                                 *   Abbreviated because it is used very frequently */
   int channel_;
   int sensorPresent_;
-  PositionType stepTarget_;
+  double stepTargetPos_nm_;
+  PositionType stepTargetSteps_;
   //asynStatus comStatus_;
   int initialPollDone_;
   int openLoop_;

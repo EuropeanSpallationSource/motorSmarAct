@@ -391,7 +391,8 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
 {
   asynPrint(pC->pasynUserSelf, ASYN_TRACEIO_DRIVER, "MCS2Axis::MCS2Axis: Creating axis %u\n", axisNo);
   channel_ = axisNo;
-  stepTarget_ = 0;
+  stepTargetSteps_ = 0;
+  stepTargetPos_nm_ = 0.0;
   initialPollDone_ = 0;
   openLoop_ = 0;
   stepsizef_ = 0.0;
@@ -572,18 +573,27 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
   } else {
     // open loop move
     double frequency = maxVelocity;
-    PositionType dtg = 0;   // distance to go
-    if (relative) {
-      dtg = (PositionType)(position);
-      stepTarget_ += dtg;  // store position in global scope
-    } else {
-      dtg = (PositionType)(position - stepTarget_);
-      stepTarget_ = (PositionType)position;       // store position in global scope
-    }
-    long long steps_to_go_i  = dtg;
+    PositionType steps_to_go_i = 0;
     if (stepsizef_ && stepsizer_) {
-      // Both directions do have a factor to scale pm into steps
-      double steps_to_go_f = (double)dtg;   // steps to go in floating point
+      /*
+       * This is the optional new handling of the driver, allowing a
+       * snooth swithing between closed- and open loop.
+       * Note that we configure position and velocity (that come to this driver)
+       * in nanometer.
+       * Closed loop is always picometer towards the controller.
+       * Open loop is always steps towards the controller.
+       * The effective travelling distance by one step is dependent
+       * on the direction, thus 2 variables. step size forward/reverse
+       */
+      double steps_to_go_f = 0;
+      if (relative) {
+        steps_to_go_f = position;
+        stepTargetPos_nm_ += position;  // store position in global scope
+      } else {
+        steps_to_go_f = position - stepTargetPos_nm_;
+        stepTargetPos_nm_ = position;       // store position in global scope
+      }
+      setDoubleParam(pC_->motorPosition_, stepTargetPos_nm_);
       steps_to_go_f *= PULSES_PER_STEP; // now we are in pm
       if (steps_to_go_f > 0) {
         steps_to_go_f /= stepsizef_; // step size in pm
@@ -593,6 +603,20 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
         frequency = maxVelocity * PULSES_PER_STEP / stepsizer_;
       }
       steps_to_go_i = (long long)steps_to_go_f;
+    } else {
+      /*
+       * The "old" handling of the driver: the position is in steps
+       * Keep track of the absolute steps in stepTargetSteps_
+       * to handle both absolute and relative movements
+       */
+      if (relative) {
+        steps_to_go_i = (PositionType)(position);
+        stepTargetSteps_ += steps_to_go_i;  // store position in global scope
+      } else {
+        steps_to_go_i = (PositionType)(position - stepTargetSteps_);
+        stepTargetSteps_ = (PositionType)position;       // store position in global scope
+      }
+      setDoubleParam(pC_->motorPosition_, (double)stepTargetSteps_);
     }
     // Set frequency; range 1..20000 Hz
     if(frequency >= MAX_FREQUENCY) {
@@ -600,9 +624,8 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
     }
     setIntegerParam(pC_->stepfreq_, (int)frequency);
     asynPrint(pC_->pasynUserController_, traceMask,
-              "%smove(%d) relative frequency=%f dtg=%lld steps_to_go_i=%lld\n",
-              "MCS2Axis::", axisNo_, frequency,
-              (long long)dtg, steps_to_go_i);
+              "%smove(%d) relative frequency=%f steps_to_go_i=%lld\n",
+              "MCS2Axis::", axisNo_, frequency, steps_to_go_i);
     if (!steps_to_go_i)
       return status;
     // Set mode; 4 == STEP
@@ -614,7 +637,6 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
     // Do move
     sprintf(pC_->outString_, ":MOVE%d %lld", channel_, steps_to_go_i);
     status = pC_->writeController();
-    setDoubleParam(pC_->motorPosition_, (double)stepTarget_);
   }
 
   return status;
