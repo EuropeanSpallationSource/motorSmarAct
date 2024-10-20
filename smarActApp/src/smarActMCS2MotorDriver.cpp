@@ -773,7 +773,7 @@ asynStatus MCS2Axis::poll(bool *moving)
 
   // Read the current encoder position, if the positioner has a sensor
   sensorPresent_ = sensorPresent;
-  if(sensorPresent){
+  if(sensorPresent) {
     sprintf(pC_->outString_, ":CHAN%d:POS?", axisNo_);
     comStatus = pC_->writeReadHandleDisconnect();
     if (comStatus) goto skip;
@@ -783,13 +783,15 @@ asynStatus MCS2Axis::poll(bool *moving)
 #ifdef SMARACT_ASYN_ASYNPARAMINT64
     pC_->setInteger64Param(axisNo_, pC_->ireadback_, atoll(pC_->inString_));
 #endif
-    // Read the current theoretical position
-    sprintf(pC_->outString_, ":CHAN%d:POS:TARG?", axisNo_);
-    comStatus = pC_->writeReadHandleDisconnect();
-    if (comStatus) goto skip;
-    theoryPosition = (double)strtod(pC_->inString_, NULL);
-    theoryPosition /= PULSES_PER_STEP;
-    setDoubleParam(pC_->motorPosition_, theoryPosition);
+    if (!openLoop_) {
+      // Read the current theoretical position
+      sprintf(pC_->outString_, ":CHAN%d:POS:TARG?", axisNo_);
+      comStatus = pC_->writeReadHandleDisconnect();
+      if (comStatus) goto skip;
+      theoryPosition = (double)strtod(pC_->inString_, NULL);
+      theoryPosition /= PULSES_PER_STEP;
+      setDoubleParam(pC_->motorPosition_, theoryPosition);
+    }
   }
 
   // Read the drive power on status
