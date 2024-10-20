@@ -390,7 +390,6 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
     pC_(pC)
 {
   asynPrint(pC->pasynUserSelf, ASYN_TRACEIO_DRIVER, "MCS2Axis::MCS2Axis: Creating axis %u\n", axisNo);
-  channel_ = axisNo;
   stepTargetSteps_ = 0;
   stepTargetPos_nm_ = 0.0;
   initialPollDone_ = 0;
@@ -567,16 +566,16 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
 
   if(sensorPresent_ && !openLoop_) {
     // closed loop move
-    sprintf(pC_->outString_, ":CHAN%d:MMOD %d", channel_, relative > 0 ? 1 : 0);
+    sprintf(pC_->outString_, ":CHAN%d:MMOD %d", axisNo_, relative > 0 ? 1 : 0);
     status = pC_->writeController();
     // Set acceleration
-    sprintf(pC_->outString_, ":CHAN%d:ACC %f", channel_, acceleration * PULSES_PER_STEP);
+    sprintf(pC_->outString_, ":CHAN%d:ACC %f", axisNo_, acceleration * PULSES_PER_STEP);
     status = pC_->writeController();
     // Set velocity
-    sprintf(pC_->outString_, ":CHAN%d:VEL %f", channel_, maxVelocity * PULSES_PER_STEP);
+    sprintf(pC_->outString_, ":CHAN%d:VEL %f", axisNo_, maxVelocity * PULSES_PER_STEP);
     status = pC_->writeController();
     // Do move
-    sprintf(pC_->outString_, ":MOVE%d %f", channel_, position * PULSES_PER_STEP);
+    sprintf(pC_->outString_, ":MOVE%d %f", axisNo_, position * PULSES_PER_STEP);
     status = pC_->writeController();
   } else {
     // open loop move
@@ -629,13 +628,13 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
     if (!steps_to_go_i)
       return status;
     // Set mode; 4 == STEP
-    sprintf(pC_->outString_, ":CHAN%d:MMOD 4", channel_);
+    sprintf(pC_->outString_, ":CHAN%d:MMOD 4", axisNo_);
     status = pC_->writeController();
 
-    sprintf(pC_->outString_, ":CHAN%d:STEP:FREQ %u", channel_, (unsigned short)frequency);
+    sprintf(pC_->outString_, ":CHAN%d:STEP:FREQ %u", axisNo_, (unsigned short)frequency);
     status = pC_->writeController();
     // Do move
-    sprintf(pC_->outString_, ":MOVE%d %lld", channel_, steps_to_go_i);
+    sprintf(pC_->outString_, ":MOVE%d %lld", axisNo_, steps_to_go_i);
     status = pC_->writeController();
   }
 
@@ -656,20 +655,20 @@ asynStatus MCS2Axis::home(double minVelocity, double maxVelocity, double acceler
 
   // Set default reference options - direction and autozero
   printf("ref opt: %d\n", refOpt);
-  sprintf(pC_->outString_, ":CHAN%d:REF:OPT %d", channel_, refOpt);
+  sprintf(pC_->outString_, ":CHAN%d:REF:OPT %d", axisNo_, refOpt);
   status = pC_->writeController();
   pC_->clearErrors();
 
   // Set acceleration
-  sprintf(pC_->outString_, ":CHAN%d:ACC %f", channel_, acceleration*PULSES_PER_STEP);
+  sprintf(pC_->outString_, ":CHAN%d:ACC %f", axisNo_, acceleration*PULSES_PER_STEP);
   status = pC_->writeController();
   pC_->clearErrors();
   // Set velocity
-  sprintf(pC_->outString_, ":CHAN%d:VEL %f", channel_, maxVelocity*PULSES_PER_STEP);
+  sprintf(pC_->outString_, ":CHAN%d:VEL %f", axisNo_, maxVelocity*PULSES_PER_STEP);
   status = pC_->writeController();
   pC_->clearErrors();
   // Begin move
-  sprintf(pC_->outString_, ":REF%d", channel_);
+  sprintf(pC_->outString_, ":REF%d", axisNo_);
   status = pC_->writeController();
   pC_->clearErrors();
 
@@ -681,7 +680,7 @@ asynStatus MCS2Axis::stop(double acceleration )
   asynStatus status;
   //static const char *functionName = "stopAxis";
 
-  sprintf(pC_->outString_, ":STOP%d", channel_);
+  sprintf(pC_->outString_, ":STOP%d", axisNo_);
   status = pC_->writeController();
 
   return status;
@@ -692,7 +691,7 @@ asynStatus MCS2Axis::setPosition(double position)
   asynStatus status=asynSuccess;
 
   printf("Set position receieved\n");
-  sprintf(pC_->outString_, ":CHAN%d:POS %f", channel_, position*PULSES_PER_STEP);
+  sprintf(pC_->outString_, ":CHAN%d:POS %f", axisNo_, position*PULSES_PER_STEP);
   status = pC_->writeController();
   return status;
 }
@@ -707,7 +706,7 @@ asynStatus MCS2Axis::initialPoll(void)
     int hold = HOLD_FOREVER;
     (void)pC_->getIntegerParam(axisNo_, pC_->hold_,
                                &hold);
-    sprintf(pC_->outString_, ":CHAN%d:HOLD %d", channel_, hold);
+    sprintf(pC_->outString_, ":CHAN%d:HOLD %d", axisNo_, hold);
     status = pC_->writeController();
     pC_->clearErrors();
   }
@@ -746,7 +745,7 @@ asynStatus MCS2Axis::poll(bool *moving)
     initialPollDone_ = 1;
   }
   // Read the channel state
-  sprintf(pC_->outString_, ":CHAN%d:STAT?", channel_);
+  sprintf(pC_->outString_, ":CHAN%d:STAT?", axisNo_);
   comStatus = pC_->writeReadHandleDisconnect();
   if (comStatus) goto skip;
   chanState = atoi(pC_->inString_);
@@ -775,17 +774,17 @@ asynStatus MCS2Axis::poll(bool *moving)
   // Read the current encoder position, if the positioner has a sensor
   sensorPresent_ = sensorPresent;
   if(sensorPresent){
-    sprintf(pC_->outString_, ":CHAN%d:POS?", channel_);
+    sprintf(pC_->outString_, ":CHAN%d:POS?", axisNo_);
     comStatus = pC_->writeReadHandleDisconnect();
     if (comStatus) goto skip;
     encoderPosition = (double)strtod(pC_->inString_, NULL);
     setDoubleParam(pC_->freadback_, encoderPosition);
     setDoubleParam(pC_->motorEncoderPosition_, encoderPosition / PULSES_PER_STEP);
 #ifdef SMARACT_ASYN_ASYNPARAMINT64
-    pC_->setInteger64Param(channel_, pC_->ireadback_, atoll(pC_->inString_));
+    pC_->setInteger64Param(axisNo_, pC_->ireadback_, atoll(pC_->inString_));
 #endif
     // Read the current theoretical position
-    sprintf(pC_->outString_, ":CHAN%d:POS:TARG?", channel_);
+    sprintf(pC_->outString_, ":CHAN%d:POS:TARG?", axisNo_);
     comStatus = pC_->writeReadHandleDisconnect();
     if (comStatus) goto skip;
     theoryPosition = (double)strtod(pC_->inString_, NULL);
@@ -794,14 +793,14 @@ asynStatus MCS2Axis::poll(bool *moving)
   }
 
   // Read the drive power on status
-  sprintf(pC_->outString_, ":CHAN%d:AMPL?", channel_);
+  sprintf(pC_->outString_, ":CHAN%d:AMPL?", axisNo_);
   comStatus = pC_->writeReadHandleDisconnect();
   if (comStatus) goto skip;
   driveOn = atoi(pC_->inString_) ? 1:0;
   setIntegerParam(pC_->motorStatusPowerOn_, driveOn);
 
   // Read the currently selected positioner type
-  sprintf(pC_->outString_, ":CHAN%d:PTYP?", channel_);
+  sprintf(pC_->outString_, ":CHAN%d:PTYP?", axisNo_);
   comStatus = pC_->writeReadHandleDisconnect();
   if (comStatus) goto skip;
   positionerType = atoi(pC_->inString_);
@@ -812,7 +811,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   {
         setIntegerParam(pC_->cal_, isCalibrated);
         setIntegerParam(pC_->ref_, isReferenced);
-        sprintf(pC_->outString_, ":CHAN%d:MCLF?", channel_);
+        sprintf(pC_->outString_, ":CHAN%d:MCLF?", axisNo_);
         comStatus = pC_->writeReadHandleDisconnect();
         if (comStatus) goto skip;
         mclf = atoi(pC_->inString_);
