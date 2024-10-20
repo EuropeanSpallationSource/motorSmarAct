@@ -725,7 +725,6 @@ asynStatus MCS2Axis::poll(bool *moving)
   int done;
   int chanState;
   int closedLoop;
-  int sensorPresent;
   int isCalibrated;
   int isReferenced;
   int endStopReached;
@@ -752,7 +751,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   setIntegerParam(pC_->pstatrb_, chanState);
   done               = (chanState & CH_STATE_ACTIVELY_MOVING)?0:1;
   closedLoop         = (chanState & CH_STATE_CLOSED_LOOP_ACTIVE)?1:0;
-  sensorPresent      = (chanState & CH_STATE_SENSOR_PRESENT)?1:0;
+  sensorPresent_     = (chanState & CH_STATE_SENSOR_PRESENT)?1:0;
   isCalibrated       = (chanState & CH_STATE_IS_CALIBRATED)?1:0;
   isReferenced       = (chanState & CH_STATE_IS_REFERENCED)?1:0;
   endStopReached     = (chanState & CH_STATE_END_STOP_REACHED)?1:0;
@@ -763,8 +762,8 @@ asynStatus MCS2Axis::poll(bool *moving)
   *moving = done ? false:true;
   setIntegerParam(pC_->motorStatusDone_, done);
   setIntegerParam(pC_->motorClosedLoop_, closedLoop);
-  setIntegerParam(pC_->motorStatusHasEncoder_, sensorPresent);
-  setIntegerParam(pC_->motorStatusGainSupport_, sensorPresent);
+  setIntegerParam(pC_->motorStatusHasEncoder_, sensorPresent_);
+  setIntegerParam(pC_->motorStatusGainSupport_, sensorPresent_);
   setIntegerParam(pC_->motorStatusHomed_, isReferenced);
   setIntegerParam(pC_->motorStatusHighLimit_, endStopReached);
   setIntegerParam(pC_->motorStatusLowLimit_, endStopReached);
@@ -772,8 +771,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   setIntegerParam(pC_->motorStatusAtHome_, refMark);
 
   // Read the current encoder position, if the positioner has a sensor
-  sensorPresent_ = sensorPresent;
-  if(sensorPresent) {
+  if(sensorPresent_) {
     sprintf(pC_->outString_, ":CHAN%d:POS?", axisNo_);
     comStatus = pC_->writeReadHandleDisconnect();
     if (comStatus) goto skip;
