@@ -321,6 +321,8 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
 
   // Set hold time in the parameter database
   asynMotorAxis::setIntegerParam(pC_->hold_, HOLD_FOREVER);
+  // Tell motorRecord that CNEN (and PCOV, ICOV, DCOV, which we dont use) work
+  asynMotorAxis::setIntegerParam(pC_->motorStatusGainSupport_, 1);
   callParamCallbacks();
 }
 
@@ -685,7 +687,6 @@ asynStatus MCS2Axis::poll(bool *moving)
   asynMotorAxis::setIntegerParam(pC_->motorStatusDone_, done);
   asynMotorAxis::setIntegerParam(pC_->motorClosedLoop_, closedLoop);
   asynMotorAxis::setIntegerParam(pC_->motorStatusHasEncoder_, sensorPresent_);
-  asynMotorAxis::setIntegerParam(pC_->motorStatusGainSupport_, sensorPresent_);
   asynMotorAxis::setIntegerParam(pC_->motorStatusHomed_, isReferenced);
   asynMotorAxis::setIntegerParam(pC_->motorStatusHighLimit_, endStopReached);
   asynMotorAxis::setIntegerParam(pC_->motorStatusLowLimit_, endStopReached);
@@ -772,6 +773,17 @@ asynStatus MCS2Axis::poll(bool *moving)
   callParamCallbacks();
   return comStatus ? asynError : asynSuccess;
 }
+
+asynStatus MCS2Axis::setClosedLoop(bool closedLoop) {
+  static const char *functionName = "setClosedLoop";
+  int value = closedLoop ? 1 : 0;
+  sprintf(pC_->outString_, "CHAN%d:AMPL %d", axisNo_, value);
+  asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+            "%ssetClosedLoop(%d)=%d '%s'\n", functionName, axisNo_, value,
+            pC_->outString_);
+  return pC_->writeController();
+}
+
 
 asynStatus MCS2Axis::setIntegerParam(int function, epicsInt32  value) {
   asynStatus status = asynError;

@@ -117,6 +117,7 @@ public:
   asynStatus home(double min_velocity, double max_velocity, double acceleration, int forwards);
   asynStatus stop(double acceleration);
   asynStatus setPosition(double position);
+  asynStatus setClosedLoop(bool closedLoop);
   asynStatus setIntegerParam(int function, epicsInt32 value);
   asynStatus setDoubleParam(int function, double value);
 
