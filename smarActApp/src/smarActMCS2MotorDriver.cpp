@@ -190,7 +190,7 @@ void MCS2Controller::handleStatusChange(asynStatus status) {
       for (axisNo = 0; axisNo < numAxes_; axisNo++) {
         asynMotorAxis *pAxis = getAxis(axisNo);
         if (!pAxis) continue;
-        pAxis->setIntegerParam(motorStatusCommsError_, 1);
+        pAxis->asynMotorAxis::setIntegerParam(motorStatusCommsError_, 1);
         pAxis->callParamCallbacks();
       }
     } else {
@@ -253,7 +253,14 @@ asynStatus MCS2Controller::clearErrors()
   }
 
   skip:
-  setIntegerParam(this->motorStatusProblem_, comStatus ? 1:0);
+  {
+    int axisNo;
+    for (axisNo = 0; axisNo < numAxes_; axisNo++) {
+      asynMotorAxis *pAxis = getAxis(axisNo);
+      if (!pAxis) continue;
+      pAxis->asynMotorAxis::setIntegerParam(motorStatusCommsError_, 1);
+    }
+  }
   callParamCallbacks();
   return comStatus ? asynError : asynSuccess;
 }
@@ -291,91 +298,6 @@ MCS2Axis* MCS2Controller::getAxis(int axisNo)
   return static_cast<MCS2Axis*>(asynMotorController::getAxis(axisNo));
 }
 
-/** Called when asyn clients call pasynInt32->write().
-  * Extracts the function and axis number from pasynUser.
-  * Sets the value in the parameter library.
-  * For all other functions it calls asynMotorController::writeInt32.
-  * Calls any registered callbacks for this pasynUser->reason and address.
-  * \param[in] pasynUser asynUser structure that encodes the reason and address.
-  * \param[in] value     Value to write. */
-asynStatus MCS2Controller::writeInt32(asynUser *pasynUser, epicsInt32 value)
-{
-  int function = pasynUser->reason;
-  asynStatus status = asynSuccess;
-  MCS2Axis *pAxis = getAxis(pasynUser);
-  static const char *functionName = "writeInt32";
-
-  /* Check if axis exists */
-  if(!pAxis) return asynError;
-
-  /* Set the parameter and readback in the parameter library.  This may be overwritten when we read back the
-   * status at the end, but that's OK */
-  status = setIntegerParam(pAxis->axisNo_, function, value);
-
-  if (function == mclf_) {
-    /* set MCLF */
-    sprintf(pAxis->pC_->outString_, ":CHAN%d:MCLF:CURR %d", pAxis->axisNo_, value);
-    status = pAxis->pC_->writeController();
-  }
-  else if (function == ptyp_) {
-    /* set positioner type */
-    sprintf(pAxis->pC_->outString_, ":CHAN%d:PTYP %d", pAxis->axisNo_, value);
-    status = pAxis->pC_->writeController();
-  }
-  else if (function == cal_) {
-    /* send calibration command */
-    sprintf(pAxis->pC_->outString_, ":CAL%d", pAxis->axisNo_);
-    status = pAxis->pC_->writeController();
-  }
-  else if (function == hold_) {
-    asynPrint(pasynUser, ASYN_TRACE_INFO, "%s(%d) hold=%d\n",
-              functionName, pAxis->axisNo_, value);
-    asynMotorController::writeInt32(pasynUser, value);
-    sprintf(pAxis->pC_->outString_, ":CHAN%d:HOLD %d", pAxis->axisNo_, value);
-    status = pAxis->pC_->writeController();
-  }
-  else if (function == openLoop_) {
-    asynPrint(pasynUser, ASYN_TRACE_INFO, "%s(%d) openLoop=%d\n",
-              functionName, pAxis->axisNo_, value);
-    asynMotorController::writeInt32(pasynUser, value);
-    pAxis->openLoop_ = value;
-  }
-  else if (function == stepcnt_) {
-    int frequency;
-    (void)getIntegerParam(pAxis->axisNo_, stepfreq_,  &frequency);
-    if(frequency >= MAX_FREQUENCY) {
-      frequency = MAX_FREQUENCY;
-    }
-    asynPrint(pasynUser, ASYN_TRACE_INFO, "%s(%d) move stepcnt=%d frequency=%d\n",
-              functionName, pAxis->axisNo_, value, frequency);
-    // Set mode; 4 == STEP
-    sprintf(outString_, ":CHAN%d:MMOD 4", pAxis->axisNo_);
-    status = writeController();
-    sprintf(outString_, ":CHAN%d:STEP:FREQ %u", pAxis->axisNo_, (unsigned short)frequency);
-    status = writeController();
-    // Do move
-    sprintf(outString_, ":MOVE%d %d", pAxis->axisNo_, value);
-    status = writeController();
-    /* reset the value inside the asyn parameters */
-    asynMotorController::writeInt32(pasynUser, 0);
-  }
-  else {
-    /* Call base class method */
-    status = asynMotorController::writeInt32(pasynUser, value);
-  }
-
-  /* Do callbacks so higher layers see any changes */
-  callParamCallbacks(pAxis->axisNo_);
-  if (status)
-    asynPrint(pasynUser, ASYN_TRACE_ERROR,
-        "%s:%s: error, status=%d function=%d, value=%d\n",
-        driverName, functionName, status, function, value);
-  else
-    asynPrint(pasynUser, ASYN_TRACEIO_DRIVER,
-        "%s:%s: function=%d, value=%d\n",
-        driverName, functionName, function, value);
-  return status;
-}
 
 // These are the MCS2Axis methods
 
@@ -398,7 +320,7 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
   stepsizer_ = 0.0;
 
   // Set hold time in the parameter database
-  setIntegerParam(pC_->hold_, HOLD_FOREVER);
+  asynMotorAxis::setIntegerParam(pC_->hold_, HOLD_FOREVER);
   callParamCallbacks();
 }
 
@@ -621,7 +543,7 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
     if(frequency >= MAX_FREQUENCY) {
       frequency = MAX_FREQUENCY;
     }
-    setIntegerParam(pC_->stepfreq_, (int)frequency);
+    asynMotorAxis::setIntegerParam(pC_->stepfreq_, (int)frequency);
     asynPrint(pC_->pasynUserController_, traceMask,
               "%smove(%d) frequency=%f steps_to_go_i=%lld\n",
               "MCS2Axis::", axisNo_, frequency, steps_to_go_i);
@@ -717,7 +639,7 @@ asynStatus MCS2Axis::initialPoll(void)
   * This function reads the controller position, encoder position, the limit status, the moving status,
   * the drive power-on status and positioner type. It does not current detect following error, etc.
   * but this could be added.
-  * It calls setIntegerParam() and setDoubleParam() for each item that it polls,
+  * It calls asynMotorAxis::setIntegerParam() and setDoubleParam() for each item that it polls,
   * and then calls callParamCallbacks() at the end.
   * \param[out] moving A flag that is set indicating that the axis is moving (1) or done (0). */
 asynStatus MCS2Axis::poll(bool *moving)
@@ -748,7 +670,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   comStatus = pC_->writeReadHandleDisconnect();
   if (comStatus) goto skip;
   chanState = atoi(pC_->inString_);
-  setIntegerParam(pC_->pstatrb_, chanState);
+  asynMotorAxis::setIntegerParam(pC_->pstatrb_, chanState);
   done               = (chanState & CH_STATE_ACTIVELY_MOVING)?0:1;
   closedLoop         = (chanState & CH_STATE_CLOSED_LOOP_ACTIVE)?1:0;
   sensorPresent_     = (chanState & CH_STATE_SENSOR_PRESENT)?1:0;
@@ -760,15 +682,15 @@ asynStatus MCS2Axis::poll(bool *moving)
   refMark            = (chanState & CH_STATE_REFERENCE_MARK)?1:0;
 
   *moving = done ? false:true;
-  setIntegerParam(pC_->motorStatusDone_, done);
-  setIntegerParam(pC_->motorClosedLoop_, closedLoop);
-  setIntegerParam(pC_->motorStatusHasEncoder_, sensorPresent_);
-  setIntegerParam(pC_->motorStatusGainSupport_, sensorPresent_);
-  setIntegerParam(pC_->motorStatusHomed_, isReferenced);
-  setIntegerParam(pC_->motorStatusHighLimit_, endStopReached);
-  setIntegerParam(pC_->motorStatusLowLimit_, endStopReached);
-  setIntegerParam(pC_->motorStatusFollowingError_, followLimitReached || movementFailed);
-  setIntegerParam(pC_->motorStatusAtHome_, refMark);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusDone_, done);
+  asynMotorAxis::setIntegerParam(pC_->motorClosedLoop_, closedLoop);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusHasEncoder_, sensorPresent_);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusGainSupport_, sensorPresent_);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusHomed_, isReferenced);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusHighLimit_, endStopReached);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusLowLimit_, endStopReached);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusFollowingError_, followLimitReached || movementFailed);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusAtHome_, refMark);
 
   // Read the current encoder position, if the positioner has a sensor
   if(sensorPresent_) {
@@ -797,30 +719,30 @@ asynStatus MCS2Axis::poll(bool *moving)
   comStatus = pC_->writeReadHandleDisconnect();
   if (comStatus) goto skip;
   driveOn = atoi(pC_->inString_) ? 1:0;
-  setIntegerParam(pC_->motorStatusPowerOn_, driveOn);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusPowerOn_, driveOn);
 
   // Read the currently selected positioner type
   sprintf(pC_->outString_, ":CHAN%d:PTYP?", axisNo_);
   comStatus = pC_->writeReadHandleDisconnect();
   if (comStatus) goto skip;
   positionerType = atoi(pC_->inString_);
-  setIntegerParam(pC_->ptyprb_, positionerType);
+  asynMotorAxis::setIntegerParam(pC_->ptyprb_, positionerType);
 
   // Read CAL/REF status and MCLF when idle
   if(done)
   {
-        setIntegerParam(pC_->cal_, isCalibrated);
-        setIntegerParam(pC_->ref_, isReferenced);
+        asynMotorAxis::setIntegerParam(pC_->cal_, isCalibrated);
+        asynMotorAxis::setIntegerParam(pC_->ref_, isReferenced);
         sprintf(pC_->outString_, ":CHAN%d:MCLF?", axisNo_);
         comStatus = pC_->writeReadHandleDisconnect();
         if (comStatus) goto skip;
         mclf = atoi(pC_->inString_);
-        setIntegerParam(pC_->mclf_, mclf);
+        asynMotorAxis::setIntegerParam(pC_->mclf_, mclf);
   }
 
   skip:
   if (comStatus) initialPollDone_ = 0;
-  setIntegerParam(pC_->motorStatusCommsError_, comStatus ? 1:0);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusCommsError_, comStatus ? 1:0);
   {
     const char *strErrorMessage = "";
     if (comStatus)
@@ -849,6 +771,59 @@ asynStatus MCS2Axis::poll(bool *moving)
   }
   callParamCallbacks();
   return comStatus ? asynError : asynSuccess;
+}
+
+asynStatus MCS2Axis::setIntegerParam(int function, epicsInt32  value) {
+  asynStatus status = asynError;
+  static const char *functionName = "setIntegerParam";
+  if (function == pC_->mclf_) {
+    /* set MCLF */
+    sprintf(pC_->outString_, ":CHAN%d:MCLF:CURR %d", axisNo_, value);
+    status = pC_->writeController();
+  }
+  else if (function == pC_->ptyp_) {
+    /* set positioner type */
+    sprintf(pC_->outString_, ":CHAN%d:PTYP %d", axisNo_, value);
+    status = pC_->writeController();
+  }
+  else if (function == pC_->cal_) {
+    /* send calibration command */
+    sprintf(pC_->outString_, ":CAL%d", axisNo_);
+    return pC_->writeController();
+  }
+  else if (function == pC_->hold_) {
+    asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO, "%s(%d) hold=%d\n",
+              functionName, axisNo_, value);
+    sprintf(pC_->outString_, ":CHAN%d:HOLD %d", axisNo_, value);
+    status = pC_->writeController();
+  }
+  else if (function == pC_->openLoop_) {
+    asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO, "%s(%d) openLoop=%d\n",
+              functionName, axisNo_, value);
+    openLoop_ = value;
+    status = asynSuccess;
+  }
+  else if (function == pC_->stepcnt_) {
+    int frequency;
+    (void)pC_->getIntegerParam(axisNo_, pC_->stepfreq_,  &frequency);
+    if(frequency >= MAX_FREQUENCY) {
+      frequency = MAX_FREQUENCY;
+    }
+    asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO, "%s(%d) move stepcnt=%d frequency=%d\n",
+              functionName, axisNo_, value, frequency);
+    // Set mode; 4 == STEP
+    sprintf(pC_->outString_, ":CHAN%d:MMOD 4", axisNo_);
+    status = pC_->writeController();
+    sprintf(pC_->outString_, ":CHAN%d:STEP:FREQ %u", axisNo_, (unsigned short)frequency);
+    status = pC_->writeController();
+    // Do move
+    sprintf(pC_->outString_, ":MOVE%d %d", axisNo_, value);
+    return pC_->writeController();
+  }
+  /* Call base class method */
+  status = asynMotorAxis::setIntegerParam(function, value);
+
+  return status;
 }
 
 asynStatus MCS2Axis::setDoubleParam(int function, double value) {

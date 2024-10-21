@@ -117,6 +117,7 @@ public:
   asynStatus home(double min_velocity, double max_velocity, double acceleration, int forwards);
   asynStatus stop(double acceleration);
   asynStatus setPosition(double position);
+  asynStatus setIntegerParam(int function, epicsInt32 value);
   asynStatus setDoubleParam(int function, double value);
 
 
@@ -146,9 +147,6 @@ public:
   void handleStatusChange(asynStatus status);
   asynStatus writeReadHandleDisconnect(void);
   virtual asynStatus clearErrors();
-
-  /* These are the methods that we override from asynMotorDriver */
-  asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
 
   /* These are the methods that we override from asynMotorDriver */
   void report(FILE *fp, int level);
