@@ -747,9 +747,9 @@ asynStatus MCS2Axis::poll(bool *moving)
     const char *strErrorMessage = "";
     if (comStatus)
       strErrorMessage = "E: Communication";
-    else if (!isReferenced)
+    else if (!isReferenced && sensorPresent_ && !openLoop_)
       strErrorMessage = "E: Axis not homed";
-    else if (!isCalibrated)
+    else if (!isCalibrated && sensorPresent_ && !openLoop_)
       strErrorMessage = "E: Not calibrated";
     else if (movementFailed)
       strErrorMessage = "E: movement failed";
