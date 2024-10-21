@@ -514,7 +514,7 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
        * The effective travelling distance by one step is dependent
        * on the direction, thus 2 variables. step size forward/reverse
        */
-      setDoubleParam(pC_->motorPosition_, stepTargetPos_nm_);
+      asynMotorAxis::setDoubleParam(pC_->motorPosition_, stepTargetPos_nm_);
       steps_to_go_f *= PULSES_PER_STEP; // now we are in pm
       if (steps_to_go_f > 0) {
         steps_to_go_f /= stepsizef_; // step size in pm
@@ -537,7 +537,7 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
         steps_to_go_i = (PositionType)(position - stepTargetSteps_);
         stepTargetSteps_ = (PositionType)position;       // store position in global scope
       }
-      setDoubleParam(pC_->motorPosition_, (double)stepTargetSteps_);
+      asynMotorAxis::setDoubleParam(pC_->motorPosition_, (double)stepTargetSteps_);
     }
     // Set frequency; range 1..20000 Hz
     if(frequency >= MAX_FREQUENCY) {
@@ -698,8 +698,8 @@ asynStatus MCS2Axis::poll(bool *moving)
     comStatus = pC_->writeReadHandleDisconnect();
     if (comStatus) goto skip;
     encoderPosition = (double)strtod(pC_->inString_, NULL);
-    setDoubleParam(pC_->freadback_, encoderPosition);
-    setDoubleParam(pC_->motorEncoderPosition_, encoderPosition / PULSES_PER_STEP);
+    asynMotorAxis::setDoubleParam(pC_->freadback_, encoderPosition);
+    asynMotorAxis::setDoubleParam(pC_->motorEncoderPosition_, encoderPosition / PULSES_PER_STEP);
 #ifdef SMARACT_ASYN_ASYNPARAMINT64
     pC_->setInteger64Param(axisNo_, pC_->ireadback_, atoll(pC_->inString_));
 #endif
@@ -710,7 +710,7 @@ asynStatus MCS2Axis::poll(bool *moving)
       if (comStatus) goto skip;
       theoryPosition = (double)strtod(pC_->inString_, NULL);
       theoryPosition /= PULSES_PER_STEP;
-      setDoubleParam(pC_->motorPosition_, theoryPosition);
+      asynMotorAxis::setDoubleParam(pC_->motorPosition_, theoryPosition);
     }
   }
 
