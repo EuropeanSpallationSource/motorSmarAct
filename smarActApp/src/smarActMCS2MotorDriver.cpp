@@ -682,6 +682,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   followLimitReached = (chanState & CH_STATE_FOLLOWING_LIMIT_REACHED)?1:0;
   movementFailed     = (chanState & CH_STATE_MOVEMENT_FAILED)?1:0;
   refMark            = (chanState & CH_STATE_REFERENCE_MARK)?1:0;
+  driveOn            = (chanState & CH_STATE_ACTIVELY_MOVING)?1:0;
 
   *moving = done ? false:true;
   asynMotorAxis::setIntegerParam(pC_->motorStatusDone_, done);
@@ -692,6 +693,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   asynMotorAxis::setIntegerParam(pC_->motorStatusLowLimit_, endStopReached);
   asynMotorAxis::setIntegerParam(pC_->motorStatusFollowingError_, followLimitReached || movementFailed);
   asynMotorAxis::setIntegerParam(pC_->motorStatusAtHome_, refMark);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusPowerOn_, driveOn);
 
   // Read the current encoder position, if the positioner has a sensor
   if(sensorPresent_) {
@@ -715,12 +717,6 @@ asynStatus MCS2Axis::poll(bool *moving)
     }
   }
 
-  // Read the drive power on status
-  sprintf(pC_->outString_, ":CHAN%d:AMPL?", axisNo_);
-  comStatus = pC_->writeReadHandleDisconnect();
-  if (comStatus) goto skip;
-  driveOn = atoi(pC_->inString_) ? 1:0;
-  asynMotorAxis::setIntegerParam(pC_->motorStatusPowerOn_, driveOn);
 
   // Read the currently selected positioner type
   sprintf(pC_->outString_, ":CHAN%d:PTYP?", axisNo_);
