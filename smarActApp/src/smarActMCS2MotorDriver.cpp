@@ -838,13 +838,13 @@ asynStatus MCS2Axis::setDoubleParam(int function, double value) {
   asynStatus status;
   if (function == pC_->stepsizef_) {
     asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
-            "%setDoubleParam(%d) function=stepsizef value=%f\n",
+            "%ssetDoubleParam(%d) function=stepsizef value=%f\n",
               "MCS2Axis::", axisNo_, value);
     this->stepsizef_ = value;
   }
   else if (function == pC_->stepsizer_) {
     asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
-            "%setDoubleParam(%d) function=stepsizer value=%f\n",
+            "%ssetDoubleParam(%d) function=stepsizer value=%f\n",
               "MCS2Axis::", axisNo_, value);
     this->stepsizer_ = value;
   }
