@@ -95,7 +95,7 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
   this->clearErrors();
 
   oldStatus_ = asynError;
-  sprintf(this->outString_, ":DEV:SNUM?");
+  snprintf(this->outString_, sizeof(this->outString_)-1,":DEV:SNUM?");
   status = this->writeReadController();
   if (status) {
     asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
@@ -210,42 +210,42 @@ asynStatus MCS2Controller::clearErrors()
   int errorCode;
 
   // Read out error messages
-  sprintf(this->outString_, ":SYST:ERR:COUN?");
+  snprintf(this->outString_, sizeof(this->outString_)-1,":SYST:ERR:COUN?");
   comStatus = this->writeReadController();
   if (comStatus) goto skip;
   numErrorMsgs = atoi(this->inString_);
   for (int i=0; i<numErrorMsgs; i++){
-    sprintf(this->outString_, ":SYST:ERR?");
+    snprintf(this->outString_, sizeof(this->outString_)-1,":SYST:ERR?");
     comStatus = this->writeReadController();
     if (comStatus) goto skip;
     printf("%s", this->inString_);
     errorCode = atoi(this->inString_);
     switch (errorCode){
-      case 259:   sprintf(errorMsg, "No sensor present");
+      case 259:   snprintf(errorMsg,sizeof(errorMsg)-1, "No sensor present");
             break;
-      case 34:    sprintf(errorMsg, "Invalid channel index");
+      case 34:    snprintf(errorMsg,sizeof(errorMsg)-1, "Invalid channel index");
             break;
-      case 0:   sprintf(errorMsg, "No error");
+      case 0:   snprintf(errorMsg,sizeof(errorMsg)-1, "No error");
             break;
-      case -101:  sprintf(errorMsg, "Invalid character");
+      case -101:  snprintf(errorMsg,sizeof(errorMsg)-1, "Invalid character");
             break;
-      case -103:  sprintf(errorMsg, "Invalid seperator");
+      case -103:  snprintf(errorMsg,sizeof(errorMsg)-1, "Invalid seperator");
             break;
-      case -104:  sprintf(errorMsg, "Data type error");
+      case -104:  snprintf(errorMsg,sizeof(errorMsg)-1, "Data type error");
             break;
-      case -108:  sprintf(errorMsg, "Parameter not allowed");
+      case -108:  snprintf(errorMsg,sizeof(errorMsg)-1, "Parameter not allowed");
             break;
-      case -109:    sprintf(errorMsg, "Missing parameter");
+      case -109:    snprintf(errorMsg,sizeof(errorMsg)-1, "Missing parameter");
             break;
-      case -113:  sprintf(errorMsg, "Command not exist");
+      case -113:  snprintf(errorMsg,sizeof(errorMsg)-1, "Command not exist");
             break;
-      case -151:  sprintf(errorMsg, "Invalid string");
+      case -151:  snprintf(errorMsg,sizeof(errorMsg)-1, "Invalid string");
             break;
-      case -350:  sprintf(errorMsg, "Queue overflow");
+      case -350:  snprintf(errorMsg,sizeof(errorMsg)-1, "Queue overflow");
             break;
-      case -363:  sprintf(errorMsg, "Buffer overrun");
+      case -363:  snprintf(errorMsg,sizeof(errorMsg)-1, "Buffer overrun");
             break;
-      default:      sprintf(errorMsg, "Unable to decode %d", errorCode);
+      default:      snprintf(errorMsg,sizeof(errorMsg)-1, "Unable to decode %d", errorCode);
             break;
     }
     asynPrint(this->pasynUserSelf, ASYN_TRACE_ERROR,
@@ -490,16 +490,16 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
 
   if(sensorPresent_ && !openLoop_) {
     // closed loop move
-    sprintf(pC_->outString_, ":CHAN%d:MMOD %d", axisNo_, relative > 0 ? 1 : 0);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:MMOD %d", axisNo_, relative > 0 ? 1 : 0);
     status = pC_->writeController();
     // Set acceleration
-    sprintf(pC_->outString_, ":CHAN%d:ACC %f", axisNo_, acceleration * PULSES_PER_STEP);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:ACC %f", axisNo_, acceleration * PULSES_PER_STEP);
     status = pC_->writeController();
     // Set velocity
-    sprintf(pC_->outString_, ":CHAN%d:VEL %f", axisNo_, maxVelocity * PULSES_PER_STEP);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:VEL %f", axisNo_, maxVelocity * PULSES_PER_STEP);
     status = pC_->writeController();
     // Do move
-    sprintf(pC_->outString_, ":MOVE%d %f", axisNo_, position * PULSES_PER_STEP);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":MOVE%d %f", axisNo_, position * PULSES_PER_STEP);
     status = pC_->writeController();
   } else {
     // open loop move
@@ -552,13 +552,13 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
     if (!steps_to_go_i)
       return status;
     // Set mode; 4 == STEP
-    sprintf(pC_->outString_, ":CHAN%d:MMOD 4", axisNo_);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:MMOD 4", axisNo_);
     status = pC_->writeController();
 
-    sprintf(pC_->outString_, ":CHAN%d:STEP:FREQ %u", axisNo_, (unsigned short)frequency);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:STEP:FREQ %u", axisNo_, (unsigned short)frequency);
     status = pC_->writeController();
     // Do move
-    sprintf(pC_->outString_, ":MOVE%d %lld", axisNo_, steps_to_go_i);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":MOVE%d %lld", axisNo_, steps_to_go_i);
     status = pC_->writeController();
   }
 
@@ -579,20 +579,20 @@ asynStatus MCS2Axis::home(double minVelocity, double maxVelocity, double acceler
 
   // Set default reference options - direction and autozero
   printf("ref opt: %d\n", refOpt);
-  sprintf(pC_->outString_, ":CHAN%d:REF:OPT %d", axisNo_, refOpt);
+  snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:REF:OPT %d", axisNo_, refOpt);
   status = pC_->writeController();
   pC_->clearErrors();
 
   // Set acceleration
-  sprintf(pC_->outString_, ":CHAN%d:ACC %f", axisNo_, acceleration*PULSES_PER_STEP);
+  snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:ACC %f", axisNo_, acceleration*PULSES_PER_STEP);
   status = pC_->writeController();
   pC_->clearErrors();
   // Set velocity
-  sprintf(pC_->outString_, ":CHAN%d:VEL %f", axisNo_, maxVelocity*PULSES_PER_STEP);
+  snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:VEL %f", axisNo_, maxVelocity*PULSES_PER_STEP);
   status = pC_->writeController();
   pC_->clearErrors();
   // Begin move
-  sprintf(pC_->outString_, ":REF%d", axisNo_);
+  snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":REF%d", axisNo_);
   status = pC_->writeController();
   pC_->clearErrors();
 
@@ -604,7 +604,7 @@ asynStatus MCS2Axis::stop(double acceleration )
   asynStatus status;
   //static const char *functionName = "stopAxis";
 
-  sprintf(pC_->outString_, ":STOP%d", axisNo_);
+  snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":STOP%d", axisNo_);
   status = pC_->writeController();
 
   return status;
@@ -615,7 +615,7 @@ asynStatus MCS2Axis::setPosition(double position)
   asynStatus status=asynSuccess;
 
   printf("Set position receieved\n");
-  sprintf(pC_->outString_, ":CHAN%d:POS %f", axisNo_, position*PULSES_PER_STEP);
+  snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:POS %f", axisNo_, position*PULSES_PER_STEP);
   status = pC_->writeController();
   return status;
 }
@@ -630,7 +630,7 @@ asynStatus MCS2Axis::initialPoll(void)
     int hold = HOLD_FOREVER;
     (void)pC_->getIntegerParam(axisNo_, pC_->hold_,
                                &hold);
-    sprintf(pC_->outString_, ":CHAN%d:HOLD %d", axisNo_, hold);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:HOLD %d", axisNo_, hold);
     status = pC_->writeController();
     pC_->clearErrors();
   }
@@ -668,7 +668,7 @@ asynStatus MCS2Axis::poll(bool *moving)
     initialPollDone_ = 1;
   }
   // Read the channel state
-  sprintf(pC_->outString_, ":CHAN%d:STAT?", axisNo_);
+  snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:STAT?", axisNo_);
   comStatus = pC_->writeReadHandleDisconnect();
   if (comStatus) goto skip;
   chanState = atoi(pC_->inString_);
@@ -697,7 +697,7 @@ asynStatus MCS2Axis::poll(bool *moving)
 
   // Read the current encoder position, if the positioner has a sensor
   if(sensorPresent_) {
-    sprintf(pC_->outString_, ":CHAN%d:POS?", axisNo_);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:POS?", axisNo_);
     comStatus = pC_->writeReadHandleDisconnect();
     if (comStatus) goto skip;
     encoderPosition = (double)strtod(pC_->inString_, NULL);
@@ -708,7 +708,7 @@ asynStatus MCS2Axis::poll(bool *moving)
 #endif
     if (!openLoop_) {
       // Read the current theoretical position
-      sprintf(pC_->outString_, ":CHAN%d:POS:TARG?", axisNo_);
+      snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:POS:TARG?", axisNo_);
       comStatus = pC_->writeReadHandleDisconnect();
       if (comStatus) goto skip;
       theoryPosition = (double)strtod(pC_->inString_, NULL);
@@ -719,7 +719,7 @@ asynStatus MCS2Axis::poll(bool *moving)
 
 
   // Read the currently selected positioner type
-  sprintf(pC_->outString_, ":CHAN%d:PTYP?", axisNo_);
+  snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:PTYP?", axisNo_);
   comStatus = pC_->writeReadHandleDisconnect();
   if (comStatus) goto skip;
   positionerType = atoi(pC_->inString_);
@@ -730,7 +730,7 @@ asynStatus MCS2Axis::poll(bool *moving)
   {
         asynMotorAxis::setIntegerParam(pC_->cal_, isCalibrated);
         asynMotorAxis::setIntegerParam(pC_->ref_, isReferenced);
-        sprintf(pC_->outString_, ":CHAN%d:MCLF?", axisNo_);
+        snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:MCLF?", axisNo_);
         comStatus = pC_->writeReadHandleDisconnect();
         if (comStatus) goto skip;
         mclf = atoi(pC_->inString_);
@@ -773,7 +773,7 @@ asynStatus MCS2Axis::poll(bool *moving)
 asynStatus MCS2Axis::setClosedLoop(bool closedLoop) {
   static const char *functionName = "setClosedLoop";
   int value = closedLoop ? 1 : 0;
-  sprintf(pC_->outString_, "CHAN%d:AMPL %d", axisNo_, value);
+  snprintf(pC_->outString_,sizeof(pC_->outString_)-1, "CHAN%d:AMPL %d", axisNo_, value);
   asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
             "%ssetClosedLoop(%d)=%d '%s'\n", functionName, axisNo_, value,
             pC_->outString_);
@@ -786,23 +786,23 @@ asynStatus MCS2Axis::setIntegerParam(int function, epicsInt32  value) {
   static const char *functionName = "setIntegerParam";
   if (function == pC_->mclf_) {
     /* set MCLF */
-    sprintf(pC_->outString_, ":CHAN%d:MCLF:CURR %d", axisNo_, value);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:MCLF:CURR %d", axisNo_, value);
     status = pC_->writeController();
   }
   else if (function == pC_->ptyp_) {
     /* set positioner type */
-    sprintf(pC_->outString_, ":CHAN%d:PTYP %d", axisNo_, value);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:PTYP %d", axisNo_, value);
     status = pC_->writeController();
   }
   else if (function == pC_->cal_) {
     /* send calibration command */
-    sprintf(pC_->outString_, ":CAL%d", axisNo_);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CAL%d", axisNo_);
     return pC_->writeController();
   }
   else if (function == pC_->hold_) {
     asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO, "%s(%d) hold=%d\n",
               functionName, axisNo_, value);
-    sprintf(pC_->outString_, ":CHAN%d:HOLD %d", axisNo_, value);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:HOLD %d", axisNo_, value);
     status = pC_->writeController();
   }
   else if (function == pC_->openLoop_) {
@@ -820,12 +820,12 @@ asynStatus MCS2Axis::setIntegerParam(int function, epicsInt32  value) {
     asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO, "%s(%d) move stepcnt=%d frequency=%d\n",
               functionName, axisNo_, value, frequency);
     // Set mode; 4 == STEP
-    sprintf(pC_->outString_, ":CHAN%d:MMOD 4", axisNo_);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:MMOD 4", axisNo_);
     status = pC_->writeController();
-    sprintf(pC_->outString_, ":CHAN%d:STEP:FREQ %u", axisNo_, (unsigned short)frequency);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:STEP:FREQ %u", axisNo_, (unsigned short)frequency);
     status = pC_->writeController();
     // Do move
-    sprintf(pC_->outString_, ":MOVE%d %d", axisNo_, value);
+    snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":MOVE%d %d", axisNo_, value);
     return pC_->writeController();
   }
   /* Call base class method */
