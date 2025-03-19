@@ -654,11 +654,9 @@ asynStatus MCS2Axis::poll(bool *moving)
   int endStopReached;
   int followLimitReached;
   int movementFailed = 0;
-  int refMark;
   int positionerType;
   double encoderPosition;
   double theoryPosition;
-  int driveOn;
   int mclf;
   asynStatus comStatus = asynSuccess;
 
@@ -681,8 +679,6 @@ asynStatus MCS2Axis::poll(bool *moving)
   endStopReached     = (chanState & CH_STATE_END_STOP_REACHED)?1:0;
   followLimitReached = (chanState & CH_STATE_FOLLOWING_LIMIT_REACHED)?1:0;
   movementFailed     = (chanState & CH_STATE_MOVEMENT_FAILED)?1:0;
-  refMark            = (chanState & CH_STATE_REFERENCE_MARK)?1:0;
-  driveOn            = (chanState & CH_STATE_ACTIVELY_MOVING)?1:0;
 
   *moving = done ? false:true;
   asynMotorAxis::setIntegerParam(pC_->motorStatusDone_, done);
@@ -692,8 +688,8 @@ asynStatus MCS2Axis::poll(bool *moving)
   asynMotorAxis::setIntegerParam(pC_->motorStatusHighLimit_, endStopReached);
   asynMotorAxis::setIntegerParam(pC_->motorStatusLowLimit_, endStopReached);
   asynMotorAxis::setIntegerParam(pC_->motorStatusFollowingError_, followLimitReached || movementFailed);
-  asynMotorAxis::setIntegerParam(pC_->motorStatusAtHome_, refMark);
-  asynMotorAxis::setIntegerParam(pC_->motorStatusPowerOn_, driveOn);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusAtHome_, (chanState & CH_STATE_REFERENCE_MARK)?1:0);
+  asynMotorAxis::setIntegerParam(pC_->motorStatusPowerOn_, (chanState & CH_STATE_AMPLIFIER_ENABLED)?1:0);
 
   // Read the current encoder position, if the positioner has a sensor
   if(sensorPresent_) {
