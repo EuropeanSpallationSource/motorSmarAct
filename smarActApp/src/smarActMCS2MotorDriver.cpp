@@ -65,6 +65,7 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
   createParam(MCS2PstatString, asynParamInt32, &this->pstatrb_);   // whole positioner status word
   createParam(MCS2RefString, asynParamInt32, &this->ref_);
   createParam(MCS2CalString, asynParamInt32, &this->cal_);
+  createParam(MCS2PosTargString, asynParamFloat64, &this->posTarg_);
   createParam(MCS2FReadbackString, asynParamFloat64, &this->freadback_);
 #ifdef SMARACT_ASYN_ASYNPARAMINT64
   createParam(MCS2IReadbackString, asynParamInt64, &this->ireadback_);
@@ -702,14 +703,17 @@ asynStatus MCS2Axis::poll(bool *moving)
 #ifdef SMARACT_ASYN_ASYNPARAMINT64
     pC_->setInteger64Param(axisNo_, pC_->ireadback_, atoll(pC_->inString_));
 #endif
-    if (!openLoop_) {
       // Read the current theoretical position
       snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:POS:TARG?", axisNo_);
       comStatus = pC_->writeReadHandleDisconnect();
       if (comStatus) goto skip;
-      theoryPosition = (double)strtod(pC_->inString_, NULL);
-      theoryPosition /= PULSES_PER_STEP;
-      asynMotorAxis::setDoubleParam(pC_->motorPosition_, theoryPosition);
+      // Save the value which is read from the controller,
+      // regardless if it is open- or closed loop
+      theoryPosition = strtod(pC_->inString_, NULL);
+      asynMotorAxis::setDoubleParam(pC_->posTarg_, theoryPosition);
+      if (!openLoop_) {
+        theoryPosition /= PULSES_PER_STEP;
+        asynMotorAxis::setDoubleParam(pC_->motorPosition_, theoryPosition);
     }
   }
 

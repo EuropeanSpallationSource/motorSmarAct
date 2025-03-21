@@ -96,6 +96,7 @@ const unsigned short   STOP_ON_REF_FOUND       = 0x0020;
 #define MCS2PstatString "PSTAT"
 #define MCS2RefString "REF"
 #define MCS2CalString "CAL"
+#define MCS2PosTargString "PosTarg"
 #define MCS2FReadbackString "FREADBACK"
 #define MCS2IReadbackString "IREADBACK"
 #define MCS2ErrTxtString "ErrTxt"
@@ -163,6 +164,7 @@ protected:
   int pstatrb_; /**< positoner status word readback */
   int ref_;  /**< reference command */
   int cal_;  /**< calibration command */
+  int posTarg_; /** commanded target position */
   int freadback_; /** readback in picometer as floating point*/
   int ireadback_; /** readback in picometer as integer */
   int errTxt_;
