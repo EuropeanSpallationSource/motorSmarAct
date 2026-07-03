@@ -69,6 +69,8 @@ pub struct Mcs2axis {
     internal_vel: f64,     // velocity as used for open/closed loop
     step_size_openloop_f: i64,
     step_size_openloop_r: i64,
+    limit_switch_position_f: i64,
+    limit_switch_position_r: i64,
 }
 
 impl Mcs2axis {
@@ -116,6 +118,8 @@ impl Mcs2axis {
             internal_vel: 0.0,
             step_size_openloop_f: 2500000, // simulated step size open loop forward
             step_size_openloop_r: 4000000, // simulated step size open loop reverse
+            limit_switch_position_f: 15_000_000_000, // (simulated) limit (switch) at 15 mm
+            limit_switch_position_r: -15_000_000_000, // (simulated) limit (switch) at -15 mm
         }
     }
     pub fn do_cal(&mut self) -> bool {
@@ -312,6 +316,8 @@ impl Mcs2axis {
                 if self.state_is_referenced {
                     self.pos_sensor = self.pos_act;
                 }
+                self.state_end_stop_reached = self.pos_act >= self.limit_switch_position_f
+                    || self.pos_act <= self.limit_switch_position_r;
             }
             Err(e) => {
                 println!("mcs2axis::status_do_move elapsed e={:?}", e);
