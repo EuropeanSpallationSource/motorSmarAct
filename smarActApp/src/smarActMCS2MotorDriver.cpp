@@ -521,6 +521,19 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
     else if (position < motorPosition)
       commandedDirection_ = -1;
   }
+  if (commandedDirection_) {
+      int externalLS = 0;
+      (void)pC_->getIntegerParam(axisNo_, pC_->externalLS_, &externalLS);
+      if (((commandedDirection_ > 0) && (externalLS & 2)) ||
+          ((commandedDirection_ < 0) && (externalLS & 1))) {
+        asynPrint(pC_->pasynUserController_, traceMask,
+                  "%smove(%d) position=%f relative=%d commandedDirection=%d externalLS=%d refused!\n",
+                  "MCS2Axis::", axisNo_, position, relative, commandedDirection_,
+                  externalLS);
+        return asynError;
+      }
+  }
+
   asynPrint(pC_->pasynUserController_, traceMask,
             "%smove(%d) position=%f relative=%d commandedDirection=%d sensorPresent=%d sensorIsDisabled=%d openLoop=%d minVelocity=%f maxVelocity=%f"
             " acceleration=%f\n",
