@@ -117,6 +117,7 @@ private:
   int initialPollDone_;
   int openLoop_;
   int sensorIsDisabled_;
+  int commandedDirection_;
   double stepsizef_;
   double stepsizer_;
   asynStatus initialPoll(void);
