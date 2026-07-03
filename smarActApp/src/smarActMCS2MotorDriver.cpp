@@ -69,6 +69,9 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
   createParam(MCS2STEPCNTString,  asynParamInt32, &this->stepcnt_);
   createParam(MCS2STEPSIZEFString, asynParamFloat64, &this->stepsizef_);
   createParam(MCS2STEPSIZERString, asynParamFloat64, &this->stepsizer_);
+  createParam(MCS2ExternalLSString, asynParamInt32, &this->externalLS_);
+  createParam(MCS2HLSPosition, asynParamFloat64, &this->HLSPosition_);
+  createParam(MCS2LLSPosition, asynParamFloat64, &this->LLSPosition_);
 
   /* Connect to MCS2 controller */
   status = pasynOctetSyncIO->connect(MCS2PortName, 0, &pasynUserController_, NULL);
@@ -951,6 +954,20 @@ asynStatus MCS2Axis::setIntegerParam(int function, epicsInt32  value) {
     /* send calibration command */
     snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CAL%d", axisNo_);
     return pC_->writeController();
+  }
+  else if (function == pC_->externalLS_) {
+    /* an external limit switch may have been hit */
+    int oldDone = 0;
+    int oldExternalLS = 0;
+    (void)pC_->getIntegerParam(axisNo_, pC_->motorStatusDone_,  &oldDone);
+    (void)pC_->getIntegerParam(axisNo_, pC_->externalLS_,  &oldExternalLS);
+    int newActivedLS = (oldExternalLS ^ value) & value;
+    asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+              "%s(%d) oldDone=%d oldExternalLS_=%d value=%d newActivedLS=%d\n",
+              functionName, axisNo_, oldDone, oldExternalLS, value, newActivedLS);
+    if (!oldDone && newActivedLS) {
+        stop(0.0);
+    }
   }
   else if (function == pC_->sensorPowerMode_) {
     snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:SENS:MODE %d", axisNo_, value);

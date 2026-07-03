@@ -85,6 +85,9 @@ const unsigned short   STOP_ON_REF_FOUND       = 0x0020;
 #define MCS2STEPCNTString "STEPCNT"
 #define MCS2STEPSIZEFString "STEPSIZEF"
 #define MCS2STEPSIZERString "STEPSIZER"
+#define MCS2ExternalLSString "ExternalLS"
+#define MCS2LLSPosition  "LLSPosition"
+#define MCS2HLSPosition  "HLSPosition"
 #define MCS2SensorPowerModeString "SensorPowerMode"
 #define MCS2SensorDelayString "SensorDelay"
 #define MCS2MotorPosWhenDoneString "MotorPosWhenDone"
@@ -153,6 +156,9 @@ protected:
   int stepcnt_;  /** step count (to move) */ /* -100000 .. + 100000 */
   int stepsizef_; /** size of an open loop step, forward, in pm */
   int stepsizer_; /** size of an open loop step, reverse==backward, in pm */
+  int externalLS_; /** external limit switch(es) bit 0, bit 1 */
+  int HLSPosition_; /** position where the external high limit switch is hit */
+  int LLSPosition_; /** position where the external low limit switch is hit */
   int sensorPowerMode_; /** Sensor power mode */
   int sensorDelay_; /** Sensor power save delay */
   int motorPosWhenDone_;  /** Theoretical position in open loop, step mode */

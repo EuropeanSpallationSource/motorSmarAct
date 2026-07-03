@@ -1,0 +1,36 @@
+#
+# template to handle external limit switches
+# The external limit switches are connected to external HW
+# and may come (be written to) from a different IOC.
+# bit 0 is the low-, bit 1 the high- limit switch.
+# Once a limit switch is activated, the motion is stopped.
+# When the position of limit switches is set up properly
+# the motor position is set to [HL]LSPosition
+#
+
+record(longout, "$(P)$(M)ExternalLS") {
+    field(DESC, "External limit switch")
+    field(EGU,  "")
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))ExternalLS")
+}
+
+record(ao, "$(P)$(M)HLSPosition") {
+    field(DESC, "External high limit switch position")
+    field(EGU,  "mm")
+    field(PREC, "6")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))HLSPosition")
+    field(VAL,  "$(HLSPosition=0)")
+    field(PINI, "YES")
+}
+
+record(ao, "$(P)$(M)LLSPosition") {
+    field(DESC, "External low limit switch position")
+    field(EGU,  "mm")
+    field(PREC, "6")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))LLSPosition")
+    field(VAL,  "$(LLSPosition=0)")
+    field(PINI, "YES")
+}
