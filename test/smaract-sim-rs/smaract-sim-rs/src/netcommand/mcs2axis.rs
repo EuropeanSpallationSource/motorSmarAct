@@ -287,32 +287,35 @@ impl Mcs2axis {
                     "mcs2axis::status_do_move elapsed time_usec={:?} vel={:?} pos={:?} pos_targ={:?} travel_distance={:?}",
                     time_usec, self.internal_vel, self.pos_act, self.pos_targ, travel_distance
                 );
-                if self.pos_act >= self.limit_switch_position_f {
-                    self.pos_act = self.limit_switch_position_f;
+                if self.pos_act > (self.limit_switch_position_f + self.in_target_window) {
                     if !self.state_end_stop_reached {
                         self.state_end_stop_reached = true;
-                        self.internal_mmod = -1;
                         println!(
                             "mcs2axis::status_do_move pos={:?} limit_switch_position_f={:?} self.state_end_stop_reached={:?}",
                             self.pos_act,
                             self.limit_switch_position_f,
                             self.state_end_stop_reached);
                     }
-                } else if self.pos_act <= self.limit_switch_position_r {
-                    self.pos_act = self.limit_switch_position_r;
+                    self.pos_act = self.limit_switch_position_f;
+                    self.internal_mmod = -1;
+                } else if self.pos_act < (self.limit_switch_position_r - self.in_target_window) {
                     if !self.state_end_stop_reached {
                         self.state_end_stop_reached = true;
-                        self.internal_mmod = -1;
                         println!(
                             "mcs2axis::status_do_move pos={:?} limit_switch_position_r={:?} self.state_end_stop_reached={:?}",
                             self.pos_act,
                             self.limit_switch_position_r,
                             self.state_end_stop_reached);
                     }
+                    self.pos_act = self.limit_switch_position_r;
+                    self.internal_mmod = -1;
                 } else {
                     self.state_end_stop_reached = false;
                 }
-                if self.internal_mmod < 0 || self.internal_vel <= 0.0 {
+                if self.internal_mmod < 0 {
+                    if self.state_is_referenced {
+                        self.pos_sensor = self.pos_act;
+                    }
                     return 0;
                 }
                 if self.pos_targ > (self.pos_act - self.in_target_window) {
