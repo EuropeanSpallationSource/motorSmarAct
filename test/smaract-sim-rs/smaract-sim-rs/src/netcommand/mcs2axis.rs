@@ -287,6 +287,34 @@ impl Mcs2axis {
                     "mcs2axis::status_do_move elapsed time_usec={:?} vel={:?} pos={:?} pos_targ={:?} travel_distance={:?}",
                     time_usec, self.internal_vel, self.pos_act, self.pos_targ, travel_distance
                 );
+                if self.pos_act >= self.limit_switch_position_f {
+                    self.pos_act = self.limit_switch_position_f;
+                    if !self.state_end_stop_reached {
+                        self.state_end_stop_reached = true;
+                        self.internal_mmod = -1;
+                        println!(
+                            "mcs2axis::status_do_move pos={:?} limit_switch_position_f={:?} self.state_end_stop_reached={:?}",
+                            self.pos_act,
+                            self.limit_switch_position_f,
+                            self.state_end_stop_reached);
+                    }
+                } else if self.pos_act <= self.limit_switch_position_r {
+                    self.pos_act = self.limit_switch_position_r;
+                    if !self.state_end_stop_reached {
+                        self.state_end_stop_reached = true;
+                        self.internal_mmod = -1;
+                        println!(
+                            "mcs2axis::status_do_move pos={:?} limit_switch_position_r={:?} self.state_end_stop_reached={:?}",
+                            self.pos_act,
+                            self.limit_switch_position_r,
+                            self.state_end_stop_reached);
+                    }
+                } else {
+                    self.state_end_stop_reached = false;
+                }
+                if self.internal_mmod < 0 || self.internal_vel <= 0.0 {
+                    return 0;
+                }
                 if self.pos_targ > (self.pos_act - self.in_target_window) {
                     // need to move forward
                     self.pos_act += travel_distance as i64;
@@ -316,8 +344,6 @@ impl Mcs2axis {
                 if self.state_is_referenced {
                     self.pos_sensor = self.pos_act;
                 }
-                self.state_end_stop_reached = self.pos_act >= self.limit_switch_position_f
-                    || self.pos_act <= self.limit_switch_position_r;
             }
             Err(e) => {
                 println!("mcs2axis::status_do_move elapsed e={:?}", e);
