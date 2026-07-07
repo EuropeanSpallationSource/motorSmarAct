@@ -1009,28 +1009,56 @@ asynStatus MCS2Axis::setIntegerParam(int function, epicsInt32  value) {
     (void)pC_->getIntegerParam(axisNo_, pC_->externalLS_,  &actExternalLS);
     int newActivedLS = (actExternalLS ^ value) & value;
     asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
-              "%s(%d) actDone=%d actExternalLS_=%d value=%d newActivedLS=%d\n",
-              functionName, axisNo_, actDone, actExternalLS, value, newActivedLS);
+              "%s(%d) externalLS sensorPresent=%d sensorIsDisabled=%d actDone=%d actExternalLS_=%d newExternalLS=%d newActivedLS=%d\n",
+              functionName, axisNo_,
+              sensorPresent_, sensorIsDisabled_,
+              actDone, actExternalLS, value, newActivedLS);
     if (!actDone && newActivedLS) {
       if(sensorPresent_ && !sensorIsDisabled_) {
         ; /* don't update the position if we have and use a sensor */
-      } else if (newActivedLS == 2) {
-        /* We are at the hLSPosition (or close to it) */
-        double hLSPosition;
-        if  (asynSuccess == pC_->getDoubleParam(axisNo_,
-                                                pC_->HLSPosition_,
-                                                &hLSPosition)) {
-          asynMotorAxis::setDoubleParam(pC_->motorPosition_,
-                                        hLSPosition / PULSES_PER_STEP);
-        }
-      } else if (newActivedLS == 1) {
-        /* We are at the lLSPosition (or close to it) */
-        double lLSPosition;
-        if  (asynSuccess == pC_->getDoubleParam(axisNo_,
-                                                pC_->LLSPosition_,
-                                                &lLSPosition)) {
-          asynMotorAxis::setDoubleParam(pC_->motorPosition_,
-                                        lLSPosition / PULSES_PER_STEP);
+      } else {
+        double motorRecResolution = 0.0;
+        pC_->getDoubleParam(axisNo_, pC_->motorRecResolution_,
+                            &motorRecResolution);
+        motorRecResolution = fabs(motorRecResolution);
+        asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+                  "%s(%d) externalLS fabs(motorRecResolution)=%f\n",
+                  functionName, axisNo_, motorRecResolution);
+        if (motorRecResolution) {
+          if (newActivedLS == 2) {
+            /* We are at the hLSPosition (or close to it) */
+            double hLSPosition;
+            if (asynSuccess == pC_->getDoubleParam(axisNo_,
+                                                   pC_->HLSPosition_,
+                                                   &hLSPosition)) {
+              double motorPosition = hLSPosition / motorRecResolution;
+              asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+                        "%s(%d) externalLS newActivedHLS motorPositionWhenDone=%f motorPosition=%f\n",
+                        functionName, axisNo_, hLSPosition, motorPosition);
+              //asynMotorAxis::setDoubleParam(pC_->motorPosWhenDone_, motorPosition);
+              asynMotorAxis::setDoubleParam(pC_->motorPosition_, motorPosition);
+            } else {
+              asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+                        "%s(%d) externalLS newActivedHLS hLSPosition undefined\n",
+                        functionName, axisNo_);
+            }
+          }
+        } else if (newActivedLS == 1) {
+          /* We are at the lLSPosition (or close to it) */
+          double lLSPosition;
+          if  (asynSuccess == pC_->getDoubleParam(axisNo_,
+                                                  pC_->LLSPosition_,
+                                                  &lLSPosition)) {
+            double motorPosition = lLSPosition / motorRecResolution;
+            asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+                      "%s(%d) externalLS newActivedLLS motorPositionWhenDone=%f motorPosition=%f\n",
+                      functionName, axisNo_, lLSPosition, motorPosition);
+            asynMotorAxis::setDoubleParam(pC_->motorPosition_, motorPosition);
+          } else {
+            asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+                      "%s(%d) externalLS newActivedLLS lLSPosition undefined\n",
+                      functionName, axisNo_);
+          }
         }
       }
       stop(0.0);
