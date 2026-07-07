@@ -292,11 +292,8 @@ impl Mcs2axis {
                 // vel is picometer/second. From pico to micro is 1000000
                 let abs_delta_in_cycle = (self.internal_vel as u128 * time_usec) / 1_000_000;
                 println!(
-                    "mcs2axis::status_do_move elapsed time_usec={:?} vel={:?} pos={:?} pos_targ={:?} abs_delta_in_cycle={:?}",
-                    time_usec, self.internal_vel, self.pos_act, self.pos_targ, abs_delta_in_cycle
-                );
-                println!(
-                    "mcs2axis::status_do_move vel[mm/sec]={:?} pos[mm]={:?} pos_targ[mm]={:?} abs_delta[mm]={:?}",
+                    "mcs2axis::status_do_move begin elapsed time[ms]={:?} vel[mm/sec]={:?} pos[mm]={:?} pos_targ[mm]={:?} abs_delta[mm]={:?}",
+                    time_usec  as f64/1_000.0,
                     self.internal_vel / 1_000_000_000.0,
                     self.pos_act as f64/1_000_000_000.0,
                     self.pos_targ as f64/1_000_000_000.0,
