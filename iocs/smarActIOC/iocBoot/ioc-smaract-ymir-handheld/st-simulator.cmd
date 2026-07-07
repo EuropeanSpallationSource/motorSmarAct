@@ -65,7 +65,7 @@ epicsEnvSet("DLLM", "-30")
 epicsEnvSet("HLSPosition", "25")
 epicsEnvSet("LLSPosition", "-25")
 epicsEnvSet("STEPSIZEF", "0.0025")
-epicsEnvSet("STEPSIZER", "0.0004")
+epicsEnvSet("STEPSIZER", "0.0040")
 dbLoadRecords("$(MOTOR)/Db/ess-mcs2.template", "P=$(P), M=$(M), PORT=$(PORT), ADDR=$(ADDR), DESC=$(DESC), TIMEOUT=$(TIMEOUT), URIP=0, DHLM=$(DHLM), DLLM=$(DLLM), STEPSIZEF=$(STEPSIZEF), STEPSIZER=$(STEPSIZER),")
 dbLoadRecords("$(MOTOR)/Db/ess-external-ls-mcs2.template", "P=$(P), M=$(M), PORT=$(PORT), ADDR=$(ADDR), TIMEOUT=$(TIMEOUT), HLSPosition=$(HLSPosition), LLSPosition=$(LLSPosition), ")
 
