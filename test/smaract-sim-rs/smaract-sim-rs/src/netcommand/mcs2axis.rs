@@ -130,6 +130,15 @@ impl Mcs2axis {
         true
     }
     pub fn do_move(&mut self, move_value: i64) -> bool {
+        println!(
+            "mcs2axis::do_move[{}] begin move_value={} mmod={} pos_targ_now[mm]={} step_freq={} vel_ext[mm/sec]={}",
+            &self.axis_no,
+            move_value,
+            self.mmod,
+            self.pos_targ as f64/1_000_000_000.0,
+            self.step_freq,
+            self.external_vel  / 1_000_000_000.0
+        );
         if self.mmod == 0 {
             // move absolute, closed loop
             println!(
@@ -147,11 +156,6 @@ impl Mcs2axis {
             self.pos_targ += move_value;
             self.internal_vel = self.external_vel;
         } else if self.mmod == 4 {
-            // step move, open loop
-            println!(
-                "mcs2axis::do_move[{}] old={} steps move_value={}",
-                &self.axis_no, self.pos_targ, move_value
-            );
             match move_value.cmp(&0) {
                 Ordering::Greater => {
                     self.internal_vel = (self.step_size_openloop_f * self.step_freq as i64) as f64;
@@ -164,8 +168,12 @@ impl Mcs2axis {
                 Ordering::Equal => {}
             }
             println!(
-                "mcs2axis::do_move[{}] step mode move_value={} pos_targ={} step_freq={} vel={}",
-                &self.axis_no, move_value, self.pos_targ, self.step_freq, self.internal_vel
+                "mcs2axis::do_move[{}] step mode move_value={} pos_targ[mm]={} step_freq={} vel[mm/sec]={}",
+                &self.axis_no,
+                move_value,
+                self.pos_targ as f64/1_000_000_000.0,
+                self.step_freq,
+                self.internal_vel  / 1_000_000_000.0
             );
         } else {
             println!(
@@ -282,11 +290,19 @@ impl Mcs2axis {
             Ok(elapsed) => {
                 let time_usec = elapsed.as_micros();
                 // vel is picometer/second. From pico to micro is 1000000
-                let travel_distance = (self.internal_vel as u128 * time_usec) / 1_000_000;
+                let abs_delta_in_cycle = (self.internal_vel as u128 * time_usec) / 1_000_000;
                 println!(
-                    "mcs2axis::status_do_move elapsed time_usec={:?} vel={:?} pos={:?} pos_targ={:?} travel_distance={:?}",
-                    time_usec, self.internal_vel, self.pos_act, self.pos_targ, travel_distance
+                    "mcs2axis::status_do_move elapsed time_usec={:?} vel={:?} pos={:?} pos_targ={:?} abs_delta_in_cycle={:?}",
+                    time_usec, self.internal_vel, self.pos_act, self.pos_targ, abs_delta_in_cycle
                 );
+                println!(
+                    "mcs2axis::status_do_move vel[mm/sec]={:?} pos[mm]={:?} pos_targ[mm]={:?} abs_delta[mm]={:?}",
+                    self.internal_vel / 1_000_000_000.0,
+                    self.pos_act as f64/1_000_000_000.0,
+                    self.pos_targ as f64/1_000_000_000.0,
+                    abs_delta_in_cycle as f64/1_000_000_000.0
+                );
+
                 if self.pos_act > (self.limit_switch_position_f + self.in_target_window) {
                     if !self.state_end_stop_reached {
                         self.state_end_stop_reached = true;
@@ -312,18 +328,12 @@ impl Mcs2axis {
                 } else {
                     self.state_end_stop_reached = false;
                 }
-                if self.internal_mmod < 0 {
-                    if self.state_is_referenced {
-                        self.pos_sensor = self.pos_act;
-                    }
-                    return 0;
-                }
-                if self.pos_targ > (self.pos_act - self.in_target_window) {
+                if self.internal_mmod < 0 { /* no movement */
+                } else if self.pos_targ > (self.pos_act - self.in_target_window) {
                     // need to move forward
-                    self.pos_act += travel_distance as i64;
+                    self.pos_act += abs_delta_in_cycle as i64;
                     if self.pos_act > (self.pos_targ + self.in_target_window) {
                         // We are there
-                        self.pos_act = self.pos_targ + self.in_target_window;
                         self.internal_mmod = -1;
                     } else {
                         self.time_pos_targ_started = SystemTime::now();
@@ -331,10 +341,9 @@ impl Mcs2axis {
                     }
                 } else if self.pos_targ < (self.pos_act + self.in_target_window) {
                     // need to move backard
-                    self.pos_act -= travel_distance as i64;
+                    self.pos_act -= abs_delta_in_cycle as i64;
                     if self.pos_act < (self.pos_targ - self.in_target_window) {
                         // We are there
-                        self.pos_act = self.pos_targ - self.in_target_window;
                         self.internal_mmod = -1;
                     } else {
                         self.time_pos_targ_started = SystemTime::now();
@@ -344,9 +353,18 @@ impl Mcs2axis {
                     // inside the tolerance window
                     self.internal_mmod = -1;
                 }
+                // TODO: Check what happens with the real stage:
+                // Does the sensor position move ?
+                // Especially
                 if self.state_is_referenced {
                     self.pos_sensor = self.pos_act;
                 }
+                println!(
+                    "mcs2axis::status_do_move end is_referenced={:?} pos[mm]={:?} pos_sensor[mm]={:?}",
+                    self.state_is_referenced,
+                    self.pos_act as f64/1_000_000_000.0,
+                    self.pos_sensor  as f64/1_000_000_000.0,
+                );
             }
             Err(e) => {
                 println!("mcs2axis::status_do_move elapsed e={:?}", e);
