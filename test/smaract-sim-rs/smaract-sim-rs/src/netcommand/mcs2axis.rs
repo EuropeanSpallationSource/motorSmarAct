@@ -118,8 +118,8 @@ impl Mcs2axis {
             internal_vel: 0.0,
             step_size_openloop_f: 2500000, // simulated step size open loop forward
             step_size_openloop_r: 4000000, // simulated step size open loop reverse
-            limit_switch_position_f: 15_000_000_000, // (simulated) limit (switch) at 15 mm
-            limit_switch_position_r: -15_000_000_000, // (simulated) limit (switch) at -15 mm
+            limit_switch_position_f: 31_000_000_000, // (simulated) limit (switch) at 31 mm
+            limit_switch_position_r: -31_000_000_000, // (simulated) limit (switch) at -31 mm
         }
     }
     pub fn do_cal(&mut self) -> bool {
