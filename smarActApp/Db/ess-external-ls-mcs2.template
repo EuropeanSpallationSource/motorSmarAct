@@ -8,9 +8,11 @@
 # the motor position is set to [HL]LSPosition
 #
 
-record(longout, "$(P)$(M)ExternalLS") {
+record(longout, "$(P)$(M)ExternalLS_W") {
     field(DESC, "External limit switch")
     field(EGU,  "")
+    field(DOL,  "$(P)$(M)ExternalLS_R CP MS")
+    field(OMSL, "closed_loop")
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))ExternalLS")
 }
