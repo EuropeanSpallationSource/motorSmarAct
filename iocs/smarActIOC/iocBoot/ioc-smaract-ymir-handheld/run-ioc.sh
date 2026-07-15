@@ -3,7 +3,7 @@
 
 ## functions
 help_and_exit() {
-  echo >&2 $0 "[simulator|handheld]"
+  echo >&2 $0 "[simulator|handheld|mcu014-limitswitch]"
   echo >&2 $0 "[simulator|handheld] [-l]"
   echo >&2 $0 "[simulator|handheld] [-l] creates a log file"
   exit 1
@@ -25,6 +25,9 @@ while test "$PARAM" != ""; do
 			DEVICE="$PARAM"
 			;;
 		handheld)
+			DEVICE="$PARAM"
+			;;
+		mcu014-limitswitch)
 			DEVICE="$PARAM"
 			;;
     *)
