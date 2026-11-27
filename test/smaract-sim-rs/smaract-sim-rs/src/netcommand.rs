@@ -98,7 +98,7 @@ impl Netcommand {
         */
         println!(
             "RX89 not handled: ch_no={} cmd_key={:?} cmd_val={:?}",
-            ch_no, &cmd_key, &cmd_val
+            ch_no, cmd_key, cmd_val
         );
         0 // return 0
     }
@@ -113,7 +113,7 @@ impl Netcommand {
             .captures(cmd_line)
             .ok_or("cmd_axis_nr_match");
         if self.dump {
-            println!("RX32: re_cmd_axis={:?}", &captures);
+            println!("RX32: re_cmd_axis={:?}", captures);
         }
         match captures {
             Ok(captures2) => {
@@ -123,7 +123,7 @@ impl Netcommand {
                 if true
                 /* || self.dump */
                 {
-                    println!("RX33: ch_no_asc={:?} ch_cmd={:?}", &ch_no_asc, &ch_cmd);
+                    println!("RX33: ch_no_asc={:?} ch_cmd={:?}", ch_no_asc, ch_cmd);
                 }
                 // Handle the different requests.
                 //  Try to keep the alphabetically ordered (in the source code)
@@ -137,7 +137,7 @@ impl Netcommand {
                     let _ok = &mut self.mcs2axes[ch_no].do_stop();
                     return 0;
                 }
-                println!("RX38: ch_no_asc={:?} ch_cmd={:?}", &ch_no_asc, &ch_cmd);
+                println!("RX38: ch_no_asc={:?} ch_cmd={:?}", ch_no_asc, ch_cmd);
             }
             Err(e) => {
                 println!("RX39: captures2 e={:?}", e);
@@ -155,7 +155,7 @@ impl Netcommand {
             .captures(cmd_line)
             .ok_or("cmd_move_pos_match");
         if self.dump {
-            println!("RX34: re_move_pos={:?}", &captures);
+            println!("RX34: re_move_pos={:?}", captures);
         }
         match captures {
             Ok(captures2) => {
@@ -170,7 +170,7 @@ impl Netcommand {
                 {
                     println!(
                         "RX34: ch_cmd={:?} ch_no_asc={:?} ch_pos_asc={:?}",
-                        &ch_cmd, &ch_no_asc, &ch_pos
+                        ch_cmd, ch_no_asc, ch_pos
                     );
                 }
                 // Handle the different requests.
@@ -179,7 +179,7 @@ impl Netcommand {
                     let _ok = &mut self.mcs2axes[ch_no].do_move(ch_pos);
                     return 0;
                 }
-                println!("RX38: ch_no_asc={:?} ch_cmd={:?}", &ch_no_asc, &ch_cmd);
+                println!("RX38: ch_no_asc={:?} ch_cmd={:?}", ch_no_asc, ch_cmd);
             }
             Err(e) => {
                 println!("RX39: captures2 e={:?}", e);
@@ -195,7 +195,7 @@ impl Netcommand {
     ) -> usize {
         let captures = self.re_channel.captures(cmd_line).ok_or("re_channel_match");
         if self.dump {
-            println!("RX121: re_channel_match={:?}", &captures);
+            println!("RX121: re_channel_match={:?}", captures);
         }
         match captures {
             Ok(captures2) => {
@@ -203,7 +203,7 @@ impl Netcommand {
                 let ch_cmd = &captures2[2];
                 let ch_no = ch_no_asc.parse::<usize>().unwrap();
                 if self.dump {
-                    println!("RX13: ch_no_asc={:?} ch_cmd={:?}", &ch_no_asc, &ch_cmd);
+                    println!("RX13: ch_no_asc={:?} ch_cmd={:?}", ch_no_asc, ch_cmd);
                 }
                 // Handle the different requests.
                 //  Try to keep the alphabetically ordered (in the source code)
@@ -253,14 +253,14 @@ impl Netcommand {
                             .captures(ch_cmd)
                             .ok_or("re_cmd_signed_match");
                         if self.dump {
-                            println!("RX22: re_cmd_signed_match={:?}", &captures);
+                            println!("RX22: re_cmd_signed_match={:?}", captures);
                         }
                         match captures {
                             Ok(captures2) => {
                                 let cmd_key = &captures2[1];
                                 let cmd_val = &captures2[2];
                                 if self.dump {
-                                    println!("RX23: cmd_key={:?} cmd_val={:?}", &cmd_key, &cmd_val);
+                                    println!("RX23: cmd_key={:?} cmd_val={:?}", cmd_key, cmd_val);
                                 }
                                 return Self::handle_channel_command_param_set_value(
                                     self,
@@ -341,7 +341,7 @@ impl Netcommand {
           and so do we here. Otherwise: A multi-threaded approach would be needed
     */
     fn handle_client(&mut self, mut stream: TcpStream) -> io::Result<()> {
-        println!("Accepted: {:?}", &mut stream);
+        println!("Accepted: {:?}", stream);
         let mut buf_recv = [0u8; NETWORK_BUFFER_SIZE];
         loop {
             let result = stream.read(&mut buf_recv);
@@ -372,12 +372,12 @@ impl Netcommand {
                                 if self.dump {
                                     println!(
                                         "RX1: read_len={} has_cr_lf={} buf=\"{}\"",
-                                        read_len, has_cr_lf, &buf_str
+                                        read_len, has_cr_lf, buf_str
                                     );
                                 }
                                 for line in buf_str.split("\r\n") {
                                     if self.dump {
-                                        println!("RX1: line=\"{}\"", &line);
+                                        println!("RX1: line=\"{}\"", line);
                                     }
                                     let mut buf_resp = [0u8; NETWORK_BUFFER_SIZE];
                                     let len =
@@ -426,7 +426,7 @@ impl Netcommand {
         let adr_port_str = format!("{}:{}", "0.0.0.0", self.ip_port);
         let listener = TcpListener::bind(&adr_port_str);
         if self.dump {
-            println!("LISTEN: {} {:?}", &adr_port_str, &listener);
+            println!("LISTEN: {} {:?}", adr_port_str, listener);
         }
 
         // accept connections and process them serially

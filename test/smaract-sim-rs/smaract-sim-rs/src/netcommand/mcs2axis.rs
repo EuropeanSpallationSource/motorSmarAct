@@ -123,7 +123,7 @@ impl Mcs2axis {
         }
     }
     pub fn do_cal(&mut self) -> bool {
-        println!("mcs2axis::do_cal[{}]", &self.axis_no);
+        println!("mcs2axis::do_cal[{}]", self.axis_no);
         self.state_is_calibrated = false;
         self.state_calibrating_counter = 100;
         self.time_calibrating_started = SystemTime::now();
@@ -132,7 +132,7 @@ impl Mcs2axis {
     pub fn do_move(&mut self, move_value: i64) -> bool {
         println!(
             "mcs2axis::do_move[{}] begin move_value={} mmod={} pos_targ_now[mm]={} step_freq={} vel_ext[mm/sec]={}",
-            &self.axis_no,
+            self.axis_no,
             move_value,
             self.mmod,
             self.pos_targ as f64/1_000_000_000.0,
@@ -143,7 +143,7 @@ impl Mcs2axis {
             // move absolute, closed loop
             println!(
                 "mcs2axis::do_move[{}] old={} absolute move_value={}",
-                &self.axis_no, self.pos_targ, move_value
+                self.axis_no, self.pos_targ, move_value
             );
             self.pos_targ = move_value;
             self.internal_vel = self.external_vel;
@@ -151,7 +151,7 @@ impl Mcs2axis {
             // move relative, closed loop
             println!(
                 "mcs2axis::do_move[{}] old={} relative move_value={}",
-                &self.axis_no, self.pos_targ, move_value
+                self.axis_no, self.pos_targ, move_value
             );
             self.pos_targ += move_value;
             self.internal_vel = self.external_vel;
@@ -169,7 +169,7 @@ impl Mcs2axis {
             }
             println!(
                 "mcs2axis::do_move[{}] step mode move_value={} pos_targ[mm]={} step_freq={} vel[mm/sec]={}",
-                &self.axis_no,
+                self.axis_no,
                 move_value,
                 self.pos_targ as f64/1_000_000_000.0,
                 self.step_freq,
@@ -178,7 +178,7 @@ impl Mcs2axis {
         } else {
             println!(
                 "mcs2axis::do_move[{}] illegal mmod={} move_value={}",
-                &self.axis_no, self.mmod, move_value
+                self.axis_no, self.mmod, move_value
             );
             return true;
         }
@@ -187,14 +187,14 @@ impl Mcs2axis {
         true
     }
     pub fn do_ref(&mut self) -> bool {
-        println!("mcs2axis::do_ref[{}]", &self.axis_no);
+        println!("mcs2axis::do_ref[{}]", self.axis_no);
         self.state_is_referenced = false;
         self.state_referencing_counter = 100;
         self.time_referencing_started = SystemTime::now();
         true
     }
     pub fn do_stop(&mut self) -> bool {
-        println!("mcs2axis::do_ref[{}]", &self.axis_no);
+        println!("mcs2axis::do_ref[{}]", self.axis_no);
         self.internal_vel = 0.0;
         self.state_calibrating_counter = 0;
         self.state_referencing_counter = 0;
@@ -445,7 +445,7 @@ impl Mcs2axis {
     pub fn set_acc(&mut self, new_acc: f64) -> bool {
         println!(
             "mcs2axis::set_acc[{}] old={} new={}",
-            &self.axis_no, self.acc, new_acc
+            self.axis_no, self.acc, new_acc
         );
         if new_acc >= 0.0 {
             self.acc = new_acc;
@@ -456,7 +456,7 @@ impl Mcs2axis {
     pub fn set_hold_time(&mut self, new_hold_time: i32) -> bool {
         println!(
             "mcs2axis::set_hold_time[{}] old={} new={}",
-            &self.axis_no, self.hold_time, new_hold_time
+            self.axis_no, self.hold_time, new_hold_time
         );
         if new_hold_time >= -1 {
             self.hold_time = new_hold_time;
@@ -467,7 +467,7 @@ impl Mcs2axis {
     pub fn set_mclf(&mut self, new_mclf: i32) -> bool {
         println!(
             "mcs2axis::set_mclf[{}] old={} new={}",
-            &self.axis_no, self.mclf, new_mclf
+            self.axis_no, self.mclf, new_mclf
         );
         if new_mclf >= 1 {
             self.mclf = new_mclf;
@@ -478,7 +478,7 @@ impl Mcs2axis {
     pub fn set_mmod(&mut self, new_mmod: i32) -> bool {
         println!(
             "mcs2axis::set_mmod{}] old={} new={}",
-            &self.axis_no, self.mmod, new_mmod
+            self.axis_no, self.mmod, new_mmod
         );
         if new_mmod >= 0 {
             self.mmod = new_mmod;
@@ -490,7 +490,7 @@ impl Mcs2axis {
     pub fn set_ref_opt(&mut self, new_ref_opt: i32) -> bool {
         println!(
             "mcs2axis::set_ref_opt[{}] old={} new={}",
-            &self.axis_no, self.ref_opt, new_ref_opt
+            self.axis_no, self.ref_opt, new_ref_opt
         );
         if new_ref_opt >= 0 {
             self.ref_opt = new_ref_opt;
@@ -501,7 +501,7 @@ impl Mcs2axis {
     pub fn set_sens_del(&mut self, new_sens_del: u32) -> bool {
         println!(
             "mcs2axis::set_sens_del{}] old={} new={}",
-            &self.axis_no, self.sens_del, new_sens_del
+            self.axis_no, self.sens_del, new_sens_del
         );
         if new_sens_del <= 5000 {
             self.sens_del = new_sens_del;
@@ -512,7 +512,7 @@ impl Mcs2axis {
     pub fn set_sens_mode(&mut self, new_sens_mode: i32) -> bool {
         println!(
             "mcs2axis::set_sens_mode{}] old={} new={}",
-            &self.axis_no, self.sens_mode, new_sens_mode
+            self.axis_no, self.sens_mode, new_sens_mode
         );
         //if new_sens_mode >= 0 && new_sens_mode <= 2 {
         if (0..=2).contains(&new_sens_mode) {
@@ -527,7 +527,7 @@ impl Mcs2axis {
     pub fn set_step_freq(&mut self, new_step_freq: i32) -> bool {
         println!(
             "mcs2axis::set_step_freq[{}] old={} new={}",
-            &self.axis_no, self.step_freq, new_step_freq
+            self.axis_no, self.step_freq, new_step_freq
         );
         if new_step_freq >= 0 {
             self.step_freq = new_step_freq;
@@ -538,7 +538,7 @@ impl Mcs2axis {
     pub fn set_vel(&mut self, new_vel: f64) -> bool {
         println!(
             "mcs2axis::set_vel[{}] old={} new={}",
-            &self.axis_no, self.external_vel, new_vel
+            self.axis_no, self.external_vel, new_vel
         );
         if new_vel >= 0.0 {
             self.external_vel = new_vel;
