@@ -1,4 +1,4 @@
-#!../../bin/darwin-x86/smarAct
+#!../../bin/${EPICS_HOST_ARCH}/smarAct
 
 epicsEnvSet("MOTOR","../../../../../..")
 
@@ -62,7 +62,7 @@ epicsEnvSet("DHLM", "265")
 epicsEnvSet("DLLM", "-265")
 epicsEnvSet("STEPSIZEF", "0.0007")
 epicsEnvSet("STEPSIZER", "0.0007")
-dbLoadRecords("$(MOTOR)/Db/ess-mcs2.template", "P=$(P), M=$(M), PORT=$(PORT), ADDR=$(ADDR), DESC=$(DESC), TIMEOUT=$(TIMEOUT), URIP=0, DHLM=$(DHLM), DLLM=$(DLLM), STEPSIZEF=$(STEPSIZEF), STEPSIZER=$(STEPSIZER),")
+dbLoadRecords("$(MOTOR)/db/ess-mcs2.template", "P=$(P), M=$(M), PORT=$(PORT), ADDR=$(ADDR), DESC=$(DESC), TIMEOUT=$(TIMEOUT), URIP=0, DHLM=$(DHLM), DLLM=$(DLLM), STEPSIZEF=$(STEPSIZEF), STEPSIZER=$(STEPSIZER),")
 
 
 ###############################################

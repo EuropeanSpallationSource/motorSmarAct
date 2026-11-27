@@ -12,6 +12,7 @@ Jan 19, 2019
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <iocsh.h>
 #include <epicsThread.h>
@@ -69,6 +70,9 @@ MCS2Controller::MCS2Controller(const char *portName, const char *MCS2PortName, i
   createParam(MCS2STEPCNTString,  asynParamInt32, &this->stepcnt_);
   createParam(MCS2STEPSIZEFString, asynParamFloat64, &this->stepsizef_);
   createParam(MCS2STEPSIZERString, asynParamFloat64, &this->stepsizer_);
+  createParam(MCS2ExternalLSString, asynParamInt32, &this->externalLS_);
+  createParam(MCS2HLSPosition, asynParamFloat64, &this->HLSPosition_);
+  createParam(MCS2LLSPosition, asynParamFloat64, &this->LLSPosition_);
 
   /* Connect to MCS2 controller */
   status = pasynOctetSyncIO->connect(MCS2PortName, 0, &pasynUserController_, NULL);
@@ -317,6 +321,7 @@ MCS2Axis::MCS2Axis(MCS2Controller *pC, int axisNo)
   initialPollDone_ = 0;
   openLoop_ = 0;
   sensorIsDisabled_ = 0;
+  commandedDirection_ = 0;
   stepsizef_ = 1.0;
   stepsizer_ = 1.0;
 
@@ -502,10 +507,39 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
    */
   unsigned traceMask = ASYN_TRACE_INFO;
   double steps_to_go = 0;
+  double motorPosition = 0.0;
+  (void)pC_->getDoubleParam(axisNo_, pC_->motorPosition_,
+                            &motorPosition);
+  commandedDirection_ = 0;
+  if (relative) {
+    if (position > 0.0)
+      commandedDirection_ = 1;
+    else if (position < 0.0)
+      commandedDirection_ = -1;
+  } else {
+    if (position > motorPosition)
+      commandedDirection_ = 1;
+    else if (position < motorPosition)
+      commandedDirection_ = -1;
+  }
+  if (commandedDirection_) {
+      int externalLS = 0;
+      (void)pC_->getIntegerParam(axisNo_, pC_->externalLS_, &externalLS);
+      if (((commandedDirection_ > 0) && (externalLS & 2)) ||
+          ((commandedDirection_ < 0) && (externalLS & 1))) {
+        asynPrint(pC_->pasynUserController_, traceMask,
+                  "%smove(%d) position=%f relative=%d commandedDirection=%d externalLS=%d refused!\n",
+                  "MCS2Axis::", axisNo_, position, relative, commandedDirection_,
+                  externalLS);
+        return asynError;
+      }
+  }
+
   asynPrint(pC_->pasynUserController_, traceMask,
-            "%smove(%d) position=%f relative=%d sensorPresent=%d sensorIsDisabled=%d openLoop=%d minVelocity=%f maxVelocity=%f"
+            "%smove(%d) position=%f relative=%d commandedDirection=%d sensorPresent=%d sensorIsDisabled=%d openLoop=%d minVelocity=%f maxVelocity=%f"
             " acceleration=%f\n",
-            "MCS2Axis::", axisNo_, position, relative, sensorPresent_,
+            "MCS2Axis::", axisNo_, position, relative, commandedDirection_,
+            sensorPresent_,
             sensorIsDisabled_ , openLoop_,
             minVelocity, maxVelocity, acceleration);
 
@@ -525,9 +559,6 @@ asynStatus MCS2Axis::move(double position, int relative, double minVelocity, dou
   } else {
     // open loop move
     double frequency = maxVelocity;
-    double motorPosition = 0.0;
-    (void)pC_->getDoubleParam(axisNo_, pC_->motorPosition_,
-                              &motorPosition);
     /*
       calculate the steps to go.
       The new handling below will re-calalculate the
@@ -614,6 +645,7 @@ asynStatus MCS2Axis::home(double minVelocity, double maxVelocity, double acceler
   static const char *functionName = "homeAxis";
   unsigned short refOpt = 0;
 
+  commandedDirection_ = forwards ? 1 : -1;
   if (forwards==0){
     refOpt |= START_DIRECTION;
   }
@@ -772,8 +804,25 @@ asynStatus MCS2Axis::poll(bool *moving)
   asynMotorAxis::setIntegerParam(pC_->motorStatusDone_, done);
   asynMotorAxis::setIntegerParam(pC_->motorClosedLoop_, closedLoop);
   asynMotorAxis::setIntegerParam(pC_->motorStatusHomed_, isReferenced);
-  asynMotorAxis::setIntegerParam(pC_->motorStatusHighLimit_, endStopReached);
-  asynMotorAxis::setIntegerParam(pC_->motorStatusLowLimit_, endStopReached);
+  {
+    int hlsReached = endStopReached;
+    int llsReached = endStopReached;
+    // When we know the commanded direction, filter out the opposite direction
+    if (commandedDirection_  > 0) {
+      llsReached = 0;
+    } else if (commandedDirection_ < 0) {
+      hlsReached = 0;
+    }
+    int externalLS = 0;
+    if (asynSuccess == pC_->getIntegerParam(axisNo_,
+                                            pC_->externalLS_,
+                                            &externalLS)) {
+      hlsReached |= (externalLS & 2);
+      llsReached |= (externalLS & 1);
+    }
+    asynMotorAxis::setIntegerParam(pC_->motorStatusHighLimit_, !!hlsReached);
+    asynMotorAxis::setIntegerParam(pC_->motorStatusLowLimit_, !!llsReached);
+  }
   asynMotorAxis::setIntegerParam(pC_->motorStatusFollowingError_, followLimitReached || movementFailed);
   asynMotorAxis::setIntegerParam(pC_->motorStatusAtHome_, (chanState & CH_STATE_REFERENCE_MARK)?1:0);
   asynMotorAxis::setIntegerParam(pC_->motorStatusPowerOn_, (chanState & CH_STATE_AMPLIFIER_ENABLED)?1:0);
@@ -947,10 +996,74 @@ asynStatus MCS2Axis::setIntegerParam(int function, epicsInt32  value) {
     status = pC_->writeController();
   }
   else if (function == pC_->cal_) {
+    commandedDirection_ = 0;
     asynMotorAxis::setIntegerParam(pC_->cal_, 0);
     /* send calibration command */
     snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CAL%d", axisNo_);
     return pC_->writeController();
+  }
+  else if (function == pC_->externalLS_) {
+    /* an external limit switch may have been hit */
+    int actDone = 0;
+    int actExternalLS = 0;
+    (void)pC_->getIntegerParam(axisNo_, pC_->motorStatusDone_,  &actDone);
+    (void)pC_->getIntegerParam(axisNo_, pC_->externalLS_,  &actExternalLS);
+    int newActivedLS = (actExternalLS ^ value) & value;
+    asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+              "%s(%d) externalLS sensorPresent=%d sensorIsDisabled=%d actDone=%d actExternalLS_=%d newExternalLS=%d newActivedLS=%d\n",
+              functionName, axisNo_,
+              sensorPresent_, sensorIsDisabled_,
+              actDone, actExternalLS, value, newActivedLS);
+    if (!actDone && newActivedLS) {
+      if(sensorPresent_ && !sensorIsDisabled_) {
+        ; /* don't update the position if we have and use a sensor */
+      } else {
+        double motorRecResolution = 0.0;
+        pC_->getDoubleParam(axisNo_, pC_->motorRecResolution_,
+                            &motorRecResolution);
+        motorRecResolution = fabs(motorRecResolution);
+        asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+                  "%s(%d) externalLS fabs(motorRecResolution)=%f\n",
+                  functionName, axisNo_, motorRecResolution);
+        if (motorRecResolution) {
+          if (newActivedLS == 2) {
+            /* We are at the hLSPosition (or close to it) */
+            double hLSPosition;
+            if (asynSuccess == pC_->getDoubleParam(axisNo_,
+                                                   pC_->HLSPosition_,
+                                                   &hLSPosition)) {
+              double motorPosition = hLSPosition / motorRecResolution;
+              asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+                        "%s(%d) externalLS newActivedHLS motorPositionWhenDone=%f motorPosition=%f\n",
+                        functionName, axisNo_, hLSPosition, motorPosition);
+              //asynMotorAxis::setDoubleParam(pC_->motorPosWhenDone_, motorPosition);
+              asynMotorAxis::setDoubleParam(pC_->motorPosition_, motorPosition);
+            } else {
+              asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+                        "%s(%d) externalLS newActivedHLS hLSPosition undefined\n",
+                        functionName, axisNo_);
+            }
+          }
+        } else if (newActivedLS == 1) {
+          /* We are at the lLSPosition (or close to it) */
+          double lLSPosition;
+          if  (asynSuccess == pC_->getDoubleParam(axisNo_,
+                                                  pC_->LLSPosition_,
+                                                  &lLSPosition)) {
+            double motorPosition = lLSPosition / motorRecResolution;
+            asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+                      "%s(%d) externalLS newActivedLLS motorPositionWhenDone=%f motorPosition=%f\n",
+                      functionName, axisNo_, lLSPosition, motorPosition);
+            asynMotorAxis::setDoubleParam(pC_->motorPosition_, motorPosition);
+          } else {
+            asynPrint(pC_->pasynUserController_, ASYN_TRACE_INFO,
+                      "%s(%d) externalLS newActivedLLS lLSPosition undefined\n",
+                      functionName, axisNo_);
+          }
+        }
+      }
+      stop(0.0);
+    }
   }
   else if (function == pC_->sensorPowerMode_) {
     snprintf(pC_->outString_,sizeof(pC_->outString_)-1, ":CHAN%d:SENS:MODE %d", axisNo_, value);

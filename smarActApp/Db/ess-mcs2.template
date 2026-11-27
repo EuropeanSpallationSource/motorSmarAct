@@ -34,6 +34,17 @@ record(motor,"$(P)$(M)")
     field(DHLM,"$(DHLM=0)")
 }
 
+# Motor resolution for this axis
+record(ao,"$(P)$(M)#MRES") {
+    field(DESC, "$(M) resolution")
+    field(DOL,  "$(P)$(M).MRES CP MS")
+    field(OMSL, "closed_loop")
+    field(DTYP, "asynFloat64")
+    field(PREC, "$(PREC=6)")
+    field(OUT,  "@asyn($(PORT),$(ADDR))MOTOR_REC_RESOLUTION")
+}
+
+
 record(ai, "$(P)$(M)PosWhenDone") {
     field(DTYP, "asynFloat64")
     field(DESC, "Position when done moving")
@@ -228,6 +239,8 @@ record(bo, "$(P)$(M)OpenLoop") {
     field(ONAM, "Opened")
     field(VAL,  "0")  # start with closed loop
     field(PINI, "YES")
+
+    info(asyn:READBACK,"1")
 }
 
 record(ao, "$(P)$(M)StepSizeFwd") {

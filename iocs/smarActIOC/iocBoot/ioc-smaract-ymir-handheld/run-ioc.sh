@@ -3,7 +3,7 @@
 
 ## functions
 help_and_exit() {
-  echo >&2 $0 "[simulator|handheld]"
+  echo >&2 $0 "[simulator|handheld|mcu014-limitswitch]"
   echo >&2 $0 "[simulator|handheld] [-l]"
   echo >&2 $0 "[simulator|handheld] [-l] creates a log file"
   exit 1
@@ -25,6 +25,9 @@ while test "$PARAM" != ""; do
 			DEVICE="$PARAM"
 			;;
 		handheld)
+			DEVICE="$PARAM"
+			;;
+		mcu014-limitswitch)
 			DEVICE="$PARAM"
 			;;
     *)
@@ -51,8 +54,8 @@ fi
 # log/tee to file
 (cd ../../../.. && make  )  &&
 if test "$DOLOG" = y; then
-  ./st-${DEVICE}.cmd  2>&1 | tee $LOG_TXT
+  ../../bin/${EPICS_HOST_ARCH}/smarAct ./st-${DEVICE}.cmd  2>&1 | tee $LOG_TXT
 else
-  ./st-${DEVICE}.cmd
+  ../../bin/${EPICS_HOST_ARCH}/smarAct ./st-${DEVICE}.cmd
 fi
 
