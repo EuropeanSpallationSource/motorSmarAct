@@ -12,6 +12,7 @@ Jan 19, 2019
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <iocsh.h>
 #include <epicsThread.h>
